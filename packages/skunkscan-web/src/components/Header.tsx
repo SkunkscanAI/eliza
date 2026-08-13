@@ -3,12 +3,13 @@ import { Button } from "./ui/button";
 import { ShieldCheck } from "./ui/icons";
 import { cn } from "../lib/utils";
 
-// Only links to routes that exist in this milestone - How It Works / About /
-// FAQ are planned for Milestone 2 and deliberately not linked yet, so this
-// nav never points at a page that isn't built.
+// FAQ and Contact are secondary pages, linked from the footer instead of
+// here - see Footer.tsx.
 const NAV_LINKS = [
   { to: "/", label: "Home" },
+  { to: "/how-it-works", label: "How It Works" },
   { to: "/pricing", label: "Pricing" },
+  { to: "/about", label: "About" },
 ];
 
 export function Header() {

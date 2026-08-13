@@ -52,6 +52,16 @@ export function Home() {
               </div>
             ))}
           </div>
+
+          <p className="mt-8 text-center">
+            <Link
+              to="/how-it-works"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-signal-green hover:text-signal-green-dark"
+            >
+              See exactly what we check per chain
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </p>
         </div>
       </section>
 
