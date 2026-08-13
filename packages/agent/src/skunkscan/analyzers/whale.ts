@@ -91,6 +91,17 @@ export function analyzeWalletWhaleStatus(
    * USD value is the strongest direct indicator of wallet size.
    * The scoring remains capped so valuation cannot determine the
    * entire whale classification by itself.
+   *
+   * The $1M / $250K / $50K cutoffs below are flat and identical across all
+   * 5 chains - this is the one part of whaleScore that's absolute-USD. The
+   * remaining ~60 points come from age/activity/diversity/funding/risk
+   * (Signals 2-6 below), each already a per-chain classification computed
+   * relative to that chain's own transaction/activity patterns rather than
+   * a shared cross-chain baseline - so the overall whale classification is
+   * a deliberate absolute-USD + chain-relative-behavior blend, not a pure
+   * absolute-USD-everywhere model. This was reviewed and intentionally kept
+   * as-is (not switched to fully absolute-USD thresholds) - do not flag
+   * this mix as a cross-chain inconsistency in a future audit pass.
    */
   if (portfolioDataIncomplete) {
     reasons.push({
