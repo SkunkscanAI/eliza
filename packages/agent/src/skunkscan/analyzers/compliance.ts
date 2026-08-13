@@ -146,9 +146,37 @@ export function analyzeWalletCompliance(
 
     matches,
 
-    limitations: [
-      "Current screening is limited to connected screening sources.",
-      "Additional sanctions and adverse media providers can be integrated in future releases.",
-    ],
+    // Previously identical text regardless of the wallet - didn't say
+    // whether this specific wallet had any matches, or which sources were
+    // actually checked vs. still planned. Built from sourcesChecked/matches
+    // above rather than restating them, so it can't drift out of sync.
+    limitations: buildComplianceLimitations(sourcesChecked, matches),
   };
+}
+
+function buildComplianceLimitations(
+  sourcesChecked: WalletComplianceScreeningSummary["sourcesChecked"],
+  matches: WalletComplianceScreeningSummary["matches"],
+): string[] {
+  const connectedSourceNames = sourcesChecked
+    .filter((source) => source.status === "connected")
+    .map((source) => source.name);
+
+  const plannedSourceNames = sourcesChecked
+    .filter((source) => source.status === "planned")
+    .map((source) => source.name);
+
+  const limitations: string[] = [
+    matches.length > 0
+      ? `${matches.length} compliance-related match${matches.length === 1 ? "" : "es"} ${matches.length === 1 ? "was" : "were"} identified against connected sources (${connectedSourceNames.join(", ")}) and should be reviewed.`
+      : `No compliance-related matches were identified against connected sources (${connectedSourceNames.join(", ")}).`,
+  ];
+
+  if (plannedSourceNames.length > 0) {
+    limitations.push(
+      `${plannedSourceNames.join(", ")} ${plannedSourceNames.length === 1 ? "is" : "are"} not yet connected - screening for ${plannedSourceNames.length === 1 ? "that category is" : "those categories is"} not yet active.`,
+    );
+  }
+
+  return limitations;
 }
