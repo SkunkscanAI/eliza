@@ -115,6 +115,12 @@ export function analyzeWalletPortfolio(
           ? "medium"
           : "low";
 
+  // Bitcoin has no native fungible-token standard - getTokenBalances()
+  // always returns an empty list there (chains/bitcoin.ts), so
+  // diversityScore/diversityLevel would always compute "none" regardless of
+  // actual wallet behavior. See diversityApplicable's doc comment in types.ts.
+  const diversityApplicable = chain !== "bitcoin";
+
   const nativeSymbol = nativeBalance.nativeSymbol;
 
   const notes = tokenHoldingsIncomplete
@@ -156,6 +162,7 @@ export function analyzeWalletPortfolio(
       : null,
     concentrationLevel,
     dataCompleteness: tokenHoldingsIncomplete ? "incomplete" : "complete",
+    diversityApplicable,
     notes,
   };
 }

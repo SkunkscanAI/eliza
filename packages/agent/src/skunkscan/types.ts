@@ -427,6 +427,16 @@ export type WalletPortfolioSummary = {
   // affect this - nothing in WalletPortfolioSummary or its consumers reads
   // nftHoldings, confirmed by grep before wiring this in.
   dataCompleteness: "complete" | "incomplete";
+  // false only for chains with no native fungible-token standard (currently
+  // Bitcoin - see portfolio.ts). A DIFFERENT dimension from dataCompleteness:
+  // Bitcoin's diversityScore/diversityLevel are legitimately "complete" (the
+  // empty token list isn't truncated, it's structurally correct), but they
+  // are not a meaningful signal - every Bitcoin wallet would otherwise
+  // compute the same "no diversification" result regardless of actual
+  // investment behavior. Downstream analyzers that read diversityScore/
+  // diversityLevel as a scoring signal (alpha.ts, conviction.ts,
+  // profitability.ts) must check this before treating either as evidence.
+  diversityApplicable: boolean;
   notes: string[];
 };
 

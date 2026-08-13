@@ -56,6 +56,10 @@ export function analyzeWalletConviction(
     limitations.push(
       "Token holdings could not be fully retrieved, so portfolio diversity was excluded from this score rather than treated as genuinely low.",
     );
+  } else if (!input.portfolio.diversityApplicable) {
+    limitations.push(
+      "This chain has no native fungible-token standard, so portfolio diversity is not a meaningful signal here and was excluded from this score.",
+    );
   } else if (
     input.portfolio.diversityLevel === "medium"
   ) {
@@ -133,6 +137,7 @@ export function analyzeWalletConviction(
 
   if (
     !portfolioDataIncomplete &&
+    input.portfolio.diversityApplicable &&
     input.portfolio.diversityLevel === "none"
   ) {
     score -= 5;
