@@ -1503,6 +1503,19 @@ export type WalletSkunkScoreSummary = {
   recommendation: string;
 
   summary: string;
+
+  // One entry per term already computed inline in analyzeSkunkScore's blend
+  // formula - no new computation, just named and exposed. weight is the
+  // fraction (0-1) of the final score this term controls; contribution is
+  // score * weight, rounded for display only (the final `score` above is
+  // computed from the unrounded terms, so summing `contribution` values may
+  // be off by a rounding unit from `score` itself).
+  breakdown: {
+    label: string;
+    score: number;
+    weight: number;
+    contribution: number;
+  }[];
 };
 
 export type WalletNftSummary = {
