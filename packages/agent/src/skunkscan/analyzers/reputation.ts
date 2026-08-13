@@ -6,6 +6,9 @@ import {
   WalletSmartMoneySummary,
   WalletTrustSummary,
 } from "../types";
+import {
+  createConfidenceResponse,
+} from "../confidence/framework";
 
 type ReputationInput = {
   trust: WalletTrustSummary;
@@ -62,6 +65,36 @@ export function analyzeWalletReputation(
   if (input.risk.level !== "low")
     concerns.push("Risk indicators reduce reputation.");
 
+  // Previously hardcoded to "medium" with a static 3-line reasons array that
+  // never mentioned smartMoney at all, despite it being reputation's
+  // second-largest blend weight (20%, tied with profitability). Weights
+  // below match the blend weights above (35/25/20/20 = 100) so a real
+  // reputationScore actually built on strong evidence gets a real "high"
+  // confidence, and smartMoney becomes visible in `reasons` when it
+  // genuinely contributed.
+  const confidenceAnalysis = createConfidenceResponse([
+    {
+      condition: input.trust.evidenceConfidence === "high",
+      score: 35,
+      reason: "Trust evidence confidence is high.",
+    },
+    {
+      condition: input.alpha.evidenceConfidence === "high",
+      score: 25,
+      reason: "Alpha evidence confidence is high.",
+    },
+    {
+      condition: input.smartMoney.evidenceConfidence === "high",
+      score: 20,
+      reason: "Smart Money evidence confidence is high.",
+    },
+    {
+      condition: input.profitability.evidenceConfidence === "high",
+      score: 20,
+      reason: "Profitability evidence confidence is high.",
+    },
+  ]);
+
   return {
     reputationScore: score,
 
@@ -69,22 +102,11 @@ export function analyzeWalletReputation(
 
     reputationLevel,
 
-    confidence: "medium",
+    confidence: confidenceAnalysis.level,
 
-    evidenceConfidence: "medium",
+    evidenceConfidence: confidenceAnalysis.level,
 
-    confidenceAnalysis: {
-      rawScore: score,
-      maxScore: 100,
-      displayScore: `${(score / 10).toFixed(1)} / 10`,
-      maxDisplayScore: 10,
-      level: "medium",
-      reasons: [
-        "Trust analysis contributed.",
-        "Alpha analysis contributed.",
-        "Profitability indicators contributed.",
-      ],
-    },
+    confidenceAnalysis,
 
     investorHeadline: `Wallet Reputation: ${reputationLevel}`,
 
