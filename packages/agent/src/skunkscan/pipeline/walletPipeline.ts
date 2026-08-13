@@ -281,6 +281,7 @@ export async function runWalletPipeline(
       whale,
       smartMoney,
       transactionRisk,
+      trust,
       input.chain,
     );
 

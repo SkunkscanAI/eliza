@@ -20,7 +20,9 @@ export function analyzeWalletEvidence(
               ? "behavior"
               : record.category === "transaction_risk"
                 ? "risk"
-                : record.category,
+                : record.category === "trust"
+                  ? "risk"
+                  : record.category,
 
     severity:
       record.confidence === "high"

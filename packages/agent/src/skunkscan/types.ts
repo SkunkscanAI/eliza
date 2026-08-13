@@ -657,7 +657,8 @@ export type WalletEvidenceRecord = {
     | "compliance"
     | "custody"
     | "smart_money"
-    | "transaction_risk";
+    | "transaction_risk"
+    | "trust";
 
   fact: string;
 
