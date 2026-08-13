@@ -4,6 +4,10 @@ import { Footer } from "./components/Footer";
 import { Home } from "./pages/Home";
 import { Check } from "./pages/Check";
 import { Pricing } from "./pages/Pricing";
+import { HowItWorks } from "./pages/HowItWorks";
+import { About } from "./pages/About";
+import { Faq } from "./pages/Faq";
+import { Contact } from "./pages/Contact";
 
 // basename matches vite.config.ts's `base` and server.ts's SKUNKSCAN_WEB_PREFIX
 // ("/trust-check") - the server mount path isn't available at "/" yet (that's
@@ -25,6 +29,10 @@ export function App() {
             <Route path="/" element={<Home />} />
             <Route path="/check" element={<Check />} />
             <Route path="/pricing" element={<Pricing />} />
+            <Route path="/how-it-works" element={<HowItWorks />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/faq" element={<Faq />} />
+            <Route path="/contact" element={<Contact />} />
           </Routes>
         </main>
         <Footer />
