@@ -114,16 +114,30 @@ export function analyzeInvestmentStyle(
     );
   }
 
+  // Previously borrowed alpha.alphaScore - a different analyzer's score,
+  // unrelated to how decisively `style` itself was chosen. Ties confidence
+  // to this file's own evidence instead: overriddenStyleMatches already
+  // measures exactly this (how many other style conditions also matched
+  // and got silently overwritten - the same evidence conflictingSignals
+  // above is built from).
   let confidence: "low" | "medium" | "high";
+  let confidenceScore: number;
 
-  if (input.alpha.alphaScore >= 75) {
+  if (style === "mixed") {
+    confidence = "low";
+    confidenceScore = 20;
+  } else if (overriddenStyleMatches.length === 0) {
     confidence = "high";
-  } else if (input.alpha.alphaScore >= 45) {
+    confidenceScore = 90;
+  } else if (overriddenStyleMatches.length === 1) {
     confidence = "medium";
+    confidenceScore = 55;
   } else {
     confidence = "low";
+    confidenceScore = 20;
+
     limitations.push(
-      "Confidence in this style classification is low based on the wallet's overall Alpha Score.",
+      "Confidence in this style classification is low because multiple competing style signals were detected - see conflictingSignals for the specific overlap.",
     );
   }
 
@@ -132,11 +146,10 @@ export function analyzeInvestmentStyle(
     confidence,
     evidenceConfidence: confidence,
     confidenceAnalysis: {
-      rawScore:
-        input.alpha.alphaScore,
+      rawScore: confidenceScore,
       maxScore: 100,
       displayScore:
-        `${(input.alpha.alphaScore / 10).toFixed(1)} / 10`,
+        `${(confidenceScore / 10).toFixed(1)} / 10`,
       maxDisplayScore: 10,
       level: confidence,
       reasons: supportingSignals,
