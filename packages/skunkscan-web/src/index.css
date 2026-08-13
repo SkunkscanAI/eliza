@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+/*
+ * SkunkScan brand tokens. Dark, trustworthy base with a single accent
+ * (signal green) that deliberately doubles as the "safe" tier color used
+ * throughout the Trust Check result card - the brand color and the "this
+ * wallet looks fine" color are the same, on purpose. Yellow/red stay purely
+ * functional tier indicators, never used as brand/CTA colors, so they can't
+ * be confused with "this is a warning about the site" vs. "this is a
+ * warning about the wallet".
+ */
+@theme {
+  --color-ink-950: #0a0f0d;
+  --color-ink-900: #101613;
+  --color-ink-800: #1a2420;
+  --color-ink-700: #26332d;
+  --color-ink-600: #3a4b43;
+  --color-ink-400: #6b8078;
+  --color-ink-200: #b9c9c2;
+  --color-ink-100: #dbe6e1;
+  --color-ink-50: #f2f7f5;
+
+  --color-signal-green: #22c55e;
+  --color-signal-green-dark: #16a34a;
+  --color-signal-yellow: #eab308;
+  --color-signal-red: #ef4444;
+
+  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+body {
+  background-color: var(--color-ink-950);
+  color: var(--color-ink-50);
+  font-family: var(--font-sans);
+}
