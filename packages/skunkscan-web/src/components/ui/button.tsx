@@ -4,13 +4,18 @@ import { ButtonHTMLAttributes, forwardRef } from "react";
 import { cn } from "../../lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-green disabled:pointer-events-none disabled:opacity-50",
+  // active:scale-95 is the actual point here: :hover never fires on touch
+  // devices, so without an :active state a mobile tap gives zero visual
+  // feedback until the loading label changes - "transition" (not just
+  // transition-colors) is needed so the scale itself animates, not just
+  // color.
+  "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-green disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
-        primary: "bg-signal-green text-ink-950 hover:bg-signal-green-dark",
-        secondary: "bg-ink-800 text-ink-50 hover:bg-ink-700 border border-ink-700",
-        ghost: "bg-transparent text-ink-100 hover:bg-ink-800",
+        primary: "bg-signal-green text-ink-950 hover:bg-signal-green-dark active:bg-signal-green-dark",
+        secondary: "bg-ink-800 text-ink-50 hover:bg-ink-700 active:bg-ink-600 border border-ink-700",
+        ghost: "bg-transparent text-ink-100 hover:bg-ink-800 active:bg-ink-700",
       },
       size: {
         default: "h-11 px-5 text-base",
