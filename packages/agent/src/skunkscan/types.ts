@@ -1252,7 +1252,11 @@ export type WalletStrategySummary = {
     | "whale_positioning"
     | "dormant";
 
-  strategyScore: number;
+  // Renamed from strategyScore - measures how much evidence supports
+  // primaryStrategy's classification, not a ranking of which trading
+  // philosophy (active vs. passive) is "better". primaryStrategy is the
+  // neutral behavioral descriptor.
+  activityScore: number;
 
   displayScore: string;
 
