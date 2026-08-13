@@ -5,19 +5,15 @@ import { Home } from "./pages/Home";
 import { Check } from "./pages/Check";
 import { Pricing } from "./pages/Pricing";
 
-// basename matches vite.config.ts's `base` and server.ts's SKUNKSCAN_WEB_PREFIX
-// ("/trust-check") - the server mount path isn't available at "/" yet (that's
-// the main elizaOS dashboard SPA on this shared codebase, with no toggle to
-// disable it per-deployment). Keeping the mount unchanged and rooting the
-// router here means "/" inside this app is the SkunkScan homepage, with zero
-// server-side changes needed. Once a dedicated domain/deployment exists,
-// pointing it at /trust-check (or adding a dashboard toggle) is a small
-// follow-up, not a rebuild of this routing.
-const BASENAME = "/trust-check";
-
+// No basename needed - this app is now deployed as its own standalone
+// Railway service (see railway.json), with its own root URL, so "/" is
+// genuinely free here. The old /trust-check-mounted deployment on
+// @elizaos/agent's shared codebase is a separate, still-valid build from
+// this same source (built with the old base:"/trust-check/" config) - left
+// untouched, not something this router needs to account for anymore.
 export function App() {
   return (
-    <BrowserRouter basename={BASENAME}>
+    <BrowserRouter>
       <div className="flex min-h-screen flex-col">
         <Header />
         <main className="flex-1">
