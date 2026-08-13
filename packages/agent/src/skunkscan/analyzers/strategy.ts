@@ -122,18 +122,31 @@ export function analyzeWalletStrategy(
     );
   }
 
-  if (
-    input.behavior.primaryProfile ===
-    "long_term_investor"
-  ) {
+  // Previously compared against "long_term_investor" - a value
+  // WalletBehaviorSummary["primaryProfile"] can never actually produce
+  // (confirmed via its type union), so this branch was permanently dead;
+  // the "active_trader" branch below was reachable but, like this one,
+  // added no supportingSignals text - both silently changed the score with
+  // no visible explanation. Fixed to "holder" (matching this file's own
+  // "holding" strategy concept and behavior.ts's real "holder" value) and
+  // both now explain themselves identically - this is deliberately framed
+  // as "an independent classifier corroborates this assessment" (a
+  // confidence signal), not "active trading scores higher than holding" -
+  // both directions get the same +10 and the same kind of explanation.
+  if (input.behavior.primaryProfile === "holder") {
     score += 10;
+
+    supportingSignals.push(
+      "An independent behavioral classification also identifies this wallet as a holder, corroborating this assessment.",
+    );
   }
 
-  if (
-    input.behavior.primaryProfile ===
-    "active_trader"
-  ) {
+  if (input.behavior.primaryProfile === "active_trader") {
     score += 10;
+
+    supportingSignals.push(
+      "An independent behavioral classification also identifies this wallet as an active trader, corroborating this assessment.",
+    );
   }
 
   if (score > 100) {
@@ -155,7 +168,11 @@ export function analyzeWalletStrategy(
 
   return {
     primaryStrategy: strategy,
-    strategyScore: score,
+    // Renamed from strategyScore - "strategy" implied a judgment of which
+    // trading philosophy is better; this is a measure of how much evidence
+    // supports the classification, not a ranking of active vs. passive
+    // trading. primaryStrategy stays the neutral behavioral descriptor.
+    activityScore: score,
     displayScore: (score / 10).toFixed(1),
     confidence,
     evidenceConfidence: confidence,
