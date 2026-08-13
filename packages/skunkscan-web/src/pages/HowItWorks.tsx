@@ -44,7 +44,7 @@ const CHAIN_COVERAGE = [
 
 const HONEST_LIMITS = [
   "Sample size: relationship and funding analysis is based on a wallet's most recent transactions, not its entire history - a deliberate cost/coverage tradeoff, not a silent gap. A real counterparty or funding event further back than that window won't be reflected yet.",
-  "Compliance screening: our internal registry (known scam, rug-pull, and suspicious wallets) is connected today. Sanctions and adverse-media screening from external providers is planned, not yet connected - we mark that honestly rather than implying broader coverage than we have.",
+  "Compliance screening: we currently check known scam wallets, rug pulls, and suspicious wallets against our own internal registry, with sanctions screening (OFAC, EU, UK, UN) and adverse-media screening from external providers planned for a future release - not connected yet. We say this exactly, not in a way that implies broader coverage than we actually have.",
   "Incomplete data is never silently treated as \"clean\": if a token-holdings fetch is truncated or times out, we say so explicitly rather than scoring a wallet as if it genuinely holds nothing else.",
 ];
 
