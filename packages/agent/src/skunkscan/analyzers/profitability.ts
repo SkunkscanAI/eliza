@@ -101,7 +101,14 @@ export function analyzeWalletProfitability(
     positiveIndicators.push("Accumulation behavior detected.");
   }
 
-  if (input.portfolio.diversityLevel === "high") {
+  // diversityApplicable is false only on chains with no native
+  // fungible-token standard (currently Bitcoin - see portfolio.ts), where
+  // diversityLevel always computes "none" regardless of actual wallet
+  // behavior - not a meaningful signal to score on either direction.
+  if (
+    input.portfolio.diversityApplicable &&
+    input.portfolio.diversityLevel === "high"
+  ) {
     profitabilityScore += 5;
     positiveIndicators.push("High portfolio diversification.");
   }
