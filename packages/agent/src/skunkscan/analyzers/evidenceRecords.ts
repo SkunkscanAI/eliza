@@ -13,6 +13,7 @@ import {
   WalletRiskSummary,
   WalletSmartMoneySummary,
   WalletTransactionRiskSummary,
+  WalletTrustSummary,
   WalletWhaleSummary,
 } from "../types";
 
@@ -53,6 +54,7 @@ export function analyzeWalletEvidenceRecords(
   whale: WalletWhaleSummary,
   smartMoney: WalletSmartMoneySummary,
   transactionRisk: WalletTransactionRiskSummary,
+  trust: WalletTrustSummary,
   chain: SupportedChain,
 ): WalletEvidenceRecord[] {
   const records: WalletEvidenceRecord[] = [];
@@ -225,6 +227,19 @@ export function analyzeWalletEvidenceRecords(
     observedAt: null,
     relatedAddresses: [walletAddress],
     limitations: custody.limitations,
+  });
+
+  records.push({
+    id: "trust-assessment",
+    category: "trust",
+    fact: `Wallet trust level is ${trust.trustLevel}, with an internal score of ${trust.trustScore} out of 100.`,
+    evidenceType: "analytical_inference",
+    sourceId: "skunkscan-trust-analysis",
+    sourceName: "SkunkScan Trust Analysis",
+    confidence: trust.confidence,
+    observedAt: null,
+    relatedAddresses: [walletAddress],
+    limitations: trust.limitations,
   });
 
   records.push({

@@ -59,7 +59,7 @@ export function analyzeWalletAssessment(
           : 10,
     description:
       `Wallet trust level is ${trust.trustLevel}.`,
-    evidenceRecordIds: [],
+    evidenceRecordIds: ["trust-assessment"],
   });
 
   factors.push({
