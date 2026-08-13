@@ -3,12 +3,13 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
-  "description": "Minimal single-page SkunkScan Trust Check UI: one address input, one button, the free Trust Check card. Served same-origin by @elizaos/agent (see server.ts) - not a standalone deployable service.",
+  "description": "SkunkScan marketing site + Trust Check tool. Deployed as its own standalone Railway service (railway.json) serving dist/ via serve.ts, and separately built (with a different base path) into @elizaos/agent's shared deployment at /trust-check (see that package's server.ts) - two artifacts from this one source, see vite.config.ts.",
   "scripts": {
     "dev": "bun --bun vite",
     "build": "bun --bun vite build",
     "typecheck": "tsc --noEmit",
-    "preview": "bun --bun vite preview --port 4466"
+    "preview": "bun --bun vite preview --port 4466",
+    "start": "bun run serve.ts"
   },
   "dependencies": {
     "@radix-ui/react-select": "^2.2.7",
