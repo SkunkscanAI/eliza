@@ -1,8 +1,9 @@
 import { FormEvent, useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { ShieldCheck } from "./ui/icons";
+import { ArrowRight, ShieldCheck } from "./ui/icons";
 
 // This service is now deployed standalone (its own Railway service, own
 // origin - see railway.json), separate from the @elizaos/agent deployment
@@ -197,6 +198,20 @@ export function TrustCheckWidget({ compact = false }: { compact?: boolean }) {
               )}
             </dl>
           )}
+
+          {/* Genuinely unlocked right now (no accounts/entitlements exist
+              yet - see Milestone 4), so this link is always shown rather
+              than hidden behind a paywall that doesn't exist. Once real
+              gating lands, this link's destination/language may need to
+              change (e.g. to a paywall/signup prompt), but that's a
+              follow-up, not something to half-build now. */}
+          <Link
+            to={`/report/${card.chain}/${encodeURIComponent(card.address)}`}
+            className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-signal-green hover:text-signal-green-dark"
+          >
+            See the full investigation
+            <ArrowRight className="h-4 w-4" />
+          </Link>
         </section>
       )}
     </div>
