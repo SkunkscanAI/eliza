@@ -9,6 +9,8 @@ import { About } from "./pages/About";
 import { Faq } from "./pages/Faq";
 import { Contact } from "./pages/Contact";
 import { Report } from "./pages/Report";
+import { Terms } from "./pages/Terms";
+import { Privacy } from "./pages/Privacy";
 
 // No basename needed - this app is now deployed as its own standalone
 // Railway service (see railway.json), with its own root URL, so "/" is
@@ -31,6 +33,8 @@ export function App() {
             <Route path="/faq" element={<Faq />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/report/:chain/:address" element={<Report />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/privacy" element={<Privacy />} />
           </Routes>
         </main>
         <Footer />
