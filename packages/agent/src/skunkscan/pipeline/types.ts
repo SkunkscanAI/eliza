@@ -1,5 +1,6 @@
 import { analyzeWalletActivity } from "../analyzers/activity";
 import { analyzeWalletAge } from "../analyzers/walletAge";
+import { analyzeWalletDormancy } from "../analyzers/walletDormancy";
 import { analyzeWalletAlpha } from "../analyzers/alpha";
 import { analyzeWalletAssessment } from "../analyzers/assessment";
 import { analyzeWalletBehavior } from "../analyzers/behavior";
@@ -81,6 +82,9 @@ export type WalletActivityPipelineResult =
 
 export type WalletAgePipelineResult =
   ReturnType<typeof analyzeWalletAge>;
+
+export type WalletDormancyPipelineResult =
+  ReturnType<typeof analyzeWalletDormancy>;
 
 export type WalletFundingPipelineResult =
   ReturnType<typeof analyzeWalletFunding>;
@@ -193,6 +197,7 @@ export type WalletInvestigationNarrativePipelineResult =
 export interface WalletPipelineOutput {
   activity: WalletActivityPipelineResult;
   age: WalletAgePipelineResult;
+  dormancy: WalletDormancyPipelineResult;
   funding: WalletFundingPipelineResult;
   portfolio: WalletPortfolioPipelineResult;
   risk: WalletRiskPipelineResult;

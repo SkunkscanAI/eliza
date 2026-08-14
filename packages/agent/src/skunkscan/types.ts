@@ -474,6 +474,7 @@ export type WalletEvidenceItem = {
     | "identity"
     | "activity"
     | "age"
+    | "dormancy"
     | "funding"
     | "portfolio"
     | "defi"
@@ -646,6 +647,7 @@ export type WalletEvidenceRecord = {
     | "identity"
     | "activity"
     | "age"
+    | "dormancy"
     | "funding"
     | "portfolio"
     | "defi"
@@ -918,6 +920,7 @@ export type WalletInvestigationReplayStep = {
     | "transactions"
     | "activity"
     | "age"
+    | "dormancy"
     | "funding"
     | "portfolio"
     | "defi"
@@ -1112,6 +1115,21 @@ export type WalletAgeSummary = {
   ageInDays?: number | null;
   ageInMonths?: number | null;
   classification: "unknown" | "new" | "established" | "veteran";
+};
+
+// Deliberately separate from WalletAgeSummary - age (how long ago the
+// wallet's first transaction happened) and dormancy (how recently it was
+// last active) are two different facts about a wallet. A wallet can be
+// both truly ancient AND currently active (the Bitcoin Genesis wallet is
+// the canonical example - first transaction January 2009, but still
+// receiving transfers today), so folding "recent activity" into the age
+// classification produces a misleading single label. Sourced from
+// WalletActivitySummary.lastActiveAt, not from age data.
+export type WalletDormancySummary = {
+  lastActiveAt: number | null;
+  daysSinceLastActivity: number | null;
+  isDormant: boolean;
+  classification: "unknown" | "active" | "recent" | "dormant";
 };
 
 export type WalletLabelCategory =
@@ -1680,6 +1698,7 @@ export type WalletInvestigationResult = {
   transactionCountSample?: number;
   activity?: WalletActivitySummary;
   age?: WalletAgeSummary;
+  dormancy?: WalletDormancySummary;
   funding?: WalletFundingSummary;
   risk?: WalletRiskSummary;
   transactionRisk?: WalletTransactionRiskSummary;

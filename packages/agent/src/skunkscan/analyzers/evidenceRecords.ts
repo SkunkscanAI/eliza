@@ -3,6 +3,7 @@ import {
   WalletActivitySummary,
   WalletAgeSummary,
   WalletComplianceScreeningSummary,
+  WalletDormancySummary,
   WalletCustodyProfile,
   WalletDeFiSummary,
   WalletEvidenceRecord,
@@ -43,6 +44,7 @@ export function analyzeWalletEvidenceRecords(
   walletAddress: string,
   activity: WalletActivitySummary,
   age: WalletAgeSummary,
+  dormancy: WalletDormancySummary,
   funding: WalletFundingSummary,
   portfolio: WalletPortfolioSummary,
   defi: WalletDeFiSummary,
@@ -82,7 +84,10 @@ export function analyzeWalletEvidenceRecords(
   records.push({
     id: "wallet-age",
     category: "age",
-    fact: `Wallet age is classified as ${age.classification}.`,
+    fact:
+      typeof age.firstKnownTransactionAt === "number"
+        ? `Wallet age is classified as ${age.classification}, based on a first known transaction on ${new Date(age.firstKnownTransactionAt * 1000).toISOString().slice(0, 10)}.`
+        : `Wallet age is classified as ${age.classification}.`,
     evidenceType: "on_chain_fact",
     sourceId: evidenceSource.sourceId,
     sourceName: evidenceSource.sourceName,
@@ -96,6 +101,32 @@ export function analyzeWalletEvidenceRecords(
     limitations:
       age.classification === "unknown"
         ? ["The earliest known transaction could not be determined."]
+        : [],
+  });
+
+  // Deliberately a separate record from "wallet-age" - age (first
+  // transaction) and dormancy (most recent transaction) are independent
+  // facts. A wallet can be simultaneously very old and not at all dormant.
+  records.push({
+    id: "wallet-dormancy",
+    category: "dormancy",
+    fact:
+      typeof dormancy.daysSinceLastActivity === "number"
+        ? `Wallet was last active ${dormancy.daysSinceLastActivity} day(s) ago, classified as ${dormancy.classification}.`
+        : "Wallet's last activity could not be determined from the analyzed sample.",
+    evidenceType: "calculated_metric",
+    sourceId: evidenceSource.sourceId,
+    sourceName: evidenceSource.sourceName,
+    confidence:
+      dormancy.classification === "unknown" ? "low" : "high",
+    observedAt:
+      typeof dormancy.lastActiveAt === "number"
+        ? new Date(dormancy.lastActiveAt * 1000).toISOString()
+        : null,
+    relatedAddresses: [walletAddress],
+    limitations:
+      dormancy.classification === "unknown"
+        ? ["No transaction in the analyzed sample to determine last activity."]
         : [],
   });
 
