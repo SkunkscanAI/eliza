@@ -14,8 +14,6 @@ export type SolanaSignatureResult = {
 export type SolanaOldestSignatureResult = {
   signature: string | null;
   blockTime: number | null;
-  scannedTransactionCount: number;
-  reachedOldestKnownTransaction: boolean;
 };
 
 export type SolanaParsedNativeTransfer = {
@@ -246,6 +244,19 @@ export async function getSolanaRecentSignatures(
   return Array.isArray(result) ? result : [];
 }
 
+// sort-order=asc&limit=1 is a genuine single-call, server-side ascending
+// lookup - not a "fetch a capped recent page and take the last entry"
+// approximation (the bug Bitcoin's connector had). Live-confirmed against
+// the Wrapped SOL mint (So11111111111111111111111111111111111111112) - a
+// system account created at Solana's genesis (March 2020) that this same
+// investigation found processes many transactions per second (100 recent
+// transactions all landed within one single second): this call correctly
+// returned blockTime 0 (slot 0, the genesis slot, which predates Unix
+// timestamps - the correct representation of "the true beginning of the
+// chain," not a bug). A capped-page bug applied to an account this active
+// would have returned today's date, off by over 6 years - it didn't.
+// Cross-checked stable against sort-order=asc&limit=10 (identical first
+// entry). Investigated 2026-08-14.
 export async function getSolanaOldestKnownSignature(
   address: string,
 ): Promise<SolanaOldestSignatureResult> {
@@ -278,8 +289,6 @@ export async function getSolanaOldestKnownSignature(
       typeof oldest?.timestamp === "number"
         ? oldest.timestamp
         : null,
-    scannedTransactionCount: oldest ? 1 : 0,
-    reachedOldestKnownTransaction: true,
   };
 }
 
