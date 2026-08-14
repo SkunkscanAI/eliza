@@ -243,7 +243,18 @@ export class BitcoinBlockchainConnector implements BlockchainConnector {
         ? (await getBitcoinXpubDashboard(trimmedAddress)).xpub.balance
         : (await getBitcoinAddressDashboard(trimmedAddress)).address.balance;
 
-      const rawSatoshis = typeof balanceSatoshis === "number" ? balanceSatoshis : 0;
+      // Independent validation at this layer too, not just trusting
+      // blockchair.ts's own guarantee - a missing/malformed balance field
+      // is a failed fetch, not a real $0 balance. Silently defaulting to 0
+      // here previously produced a confident-looking but fake "Balance: 0
+      // BTC" result instead of a real error.
+      if (typeof balanceSatoshis !== "number") {
+        throw new Error(
+          "Blockchair did not return a valid balance for this address.",
+        );
+      }
+
+      const rawSatoshis = balanceSatoshis;
 
       return createSuccessResult({
         chainId: BITCOIN_CHAIN_ID,
