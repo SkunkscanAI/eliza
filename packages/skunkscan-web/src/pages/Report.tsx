@@ -9,6 +9,8 @@ import { SignalList } from "../components/report/SignalList";
 import { RelationshipsList } from "../components/report/RelationshipsList";
 import { EvidenceRegister } from "../components/report/EvidenceRegister";
 import { TransactionsList } from "../components/report/TransactionsList";
+import { Link } from "react-router-dom";
+import { ArrowRight } from "../components/ui/icons";
 
 // This service is deployed standalone - see TrustCheckWidget.tsx's
 // identical constant and comment for why this needs to be absolute.
@@ -262,6 +264,13 @@ export function Report() {
         </ReportSection>
 
         <ReportSection id="sub-scores" title="Sub-Scores" subtitle="What SkunkScore is built from">
+          <Link
+            to="/understanding-your-report"
+            className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-signal-green hover:text-signal-green-dark"
+          >
+            What do these 14 scores actually mean?
+            <ArrowRight className="h-4 w-4" />
+          </Link>
           <div className="mb-6 overflow-x-auto">
             <table className="w-full min-w-[420px] text-left text-sm">
               <thead>
@@ -321,7 +330,7 @@ export function Report() {
           )}
         </ReportSection>
 
-        <ReportSection id="evidence" title="Evidence Register" defaultOpen={false}>
+        <ReportSection id="evidence" title="Evidence Register">
           <EvidenceRegister records={evidenceRecords ?? []} />
         </ReportSection>
 

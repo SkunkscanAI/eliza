@@ -12,6 +12,7 @@ import { Report } from "./pages/Report";
 import { Terms } from "./pages/Terms";
 import { Privacy } from "./pages/Privacy";
 import { Changelog } from "./pages/Changelog";
+import { UnderstandingYourReport } from "./pages/UnderstandingYourReport";
 
 // No basename needed - this app is now deployed as its own standalone
 // Railway service (see railway.json), with its own root URL, so "/" is
@@ -37,6 +38,7 @@ export function App() {
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/changelog" element={<Changelog />} />
+            <Route path="/understanding-your-report" element={<UnderstandingYourReport />} />
           </Routes>
         </main>
         <Footer />
