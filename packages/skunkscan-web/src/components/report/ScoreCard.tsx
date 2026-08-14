@@ -1,4 +1,5 @@
 import { SignalList } from "./SignalList";
+import { ArrowRight } from "../ui/icons";
 
 // Every scoring analyzer (whale/trust/risk/exposure/smartMoney/strategy/
 // conviction/alpha/investmentStyle/profitability/reputation) returns the
@@ -40,6 +41,20 @@ export function ScoreCard({
       )}
       {limitations.length > 0 && (
         <p className="mt-3 text-xs text-ink-400">{limitations[0]}</p>
+      )}
+
+      {/* Evidence-gated: only appears when this card actually has real
+          evidence behind it (positive/negative signals or a disclosed
+          limitation) - links to the report's real structured evidence
+          records, not a freeform explanation. */}
+      {(positive.length > 0 || negative.length > 0 || limitations.length > 0) && (
+        <a
+          href="#evidence"
+          className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-signal-green hover:text-signal-green-dark"
+        >
+          Why? See the evidence
+          <ArrowRight className="h-3 w-3" />
+        </a>
       )}
     </div>
   );

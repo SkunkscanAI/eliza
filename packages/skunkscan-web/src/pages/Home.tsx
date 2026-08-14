@@ -1,6 +1,13 @@
 import { Link } from "react-router-dom";
 import { TrustCheckWidget } from "../components/TrustCheckWidget";
-import { ArrowRight, ShieldCheck } from "../components/ui/icons";
+import { ArrowRight, Check, ShieldCheck } from "../components/ui/icons";
+
+const TRUST_POINTS = [
+  "Read-only analysis - we only ever read public on-chain data, never request access to your wallet.",
+  "No seed phrases, ever - there's nothing to connect and nothing to sign.",
+  "Evidence-backed findings - every score traces back to real on-chain data we can point to, not a vibe.",
+  "Transparent methodology - every report discloses what we checked and what we didn't.",
+];
 
 const STEPS = [
   {
@@ -34,6 +41,10 @@ export function Home() {
         <div className="mx-auto mt-8 max-w-2xl rounded-2xl border border-ink-800 bg-ink-900/60 p-4 sm:mt-10 sm:p-8">
           <TrustCheckWidget />
         </div>
+
+        <p className="mx-auto mt-4 max-w-2xl text-center text-sm text-ink-400">
+          Works with Ethereum, Solana, BNB Chain, Base, and Bitcoin wallets.
+        </p>
       </section>
 
       <section className="border-t border-ink-800 bg-ink-900/40">
@@ -59,6 +70,41 @@ export function Home() {
               className="inline-flex items-center gap-1.5 text-sm font-medium text-signal-green hover:text-signal-green-dark"
             >
               See exactly what we check per chain
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </p>
+        </div>
+      </section>
+
+      <section className="border-t border-ink-800 bg-ink-900/40">
+        <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 sm:py-16">
+          <h2 className="text-center text-2xl font-semibold text-ink-50 sm:text-3xl">
+            Built for verification, not speculation
+          </h2>
+          <ul className="mt-8 space-y-4">
+            {TRUST_POINTS.map((point) => (
+              <li key={point} className="flex items-start gap-3 text-sm text-ink-200 sm:text-base">
+                <Check className="mt-0.5 h-5 w-5 shrink-0 text-signal-green" />
+                <span>{point}</span>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-8 rounded-lg border border-signal-yellow/40 bg-signal-yellow/10 p-4 text-sm sm:p-5">
+            <p className="font-semibold text-signal-yellow">No guarantees</p>
+            <p className="mt-1 text-ink-200">
+              A low-risk result is not a guarantee of safety - it means no evidence of risk was
+              found in what SkunkScan was able to check. Always use your own judgment before
+              sending funds.
+            </p>
+          </div>
+
+          <p className="mt-6 text-center">
+            <Link
+              to="/about"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-signal-green hover:text-signal-green-dark"
+            >
+              Read how we think about trust
               <ArrowRight className="h-4 w-4" />
             </Link>
           </p>

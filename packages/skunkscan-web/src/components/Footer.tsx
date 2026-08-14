@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 
 const SECONDARY_LINKS = [
   { to: "/faq", label: "FAQ" },
+  { to: "/understanding-your-report", label: "Understanding Your Report" },
   { to: "/contact", label: "Contact" },
   { to: "/terms", label: "Terms" },
   { to: "/privacy", label: "Privacy" },

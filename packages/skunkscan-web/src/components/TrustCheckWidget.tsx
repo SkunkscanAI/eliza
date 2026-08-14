@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { ArrowRight, ShieldCheck } from "./ui/icons";
+import { ArrowRight, ChevronDown, ShieldCheck } from "./ui/icons";
+import { cn } from "../lib/utils";
 
 // This service is now deployed standalone (its own Railway service, own
 // origin - see railway.json), separate from the @elizaos/agent deployment
@@ -73,6 +74,7 @@ export function TrustCheckWidget({ compact = false }: { compact?: boolean }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [card, setCard] = useState<TrustCheckCard | null>(null);
+  const [showWhy, setShowWhy] = useState(true);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -82,6 +84,7 @@ export function TrustCheckWidget({ compact = false }: { compact?: boolean }) {
     setLoading(true);
     setError(null);
     setCard(null);
+    setShowWhy(true);
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/skunkscan/trust-check`, {
@@ -147,10 +150,15 @@ export function TrustCheckWidget({ compact = false }: { compact?: boolean }) {
       </form>
 
       {!compact && (
-        <p className="mt-2 flex items-center gap-1.5 text-sm text-ink-400">
-          <ShieldCheck className="h-4 w-4 shrink-0" />
-          Free, no account needed. We never ask you to connect a wallet.
-        </p>
+        <>
+          <p className="mt-2 flex items-center gap-1.5 text-sm text-ink-400">
+            <ShieldCheck className="h-4 w-4 shrink-0" />
+            Free, no account needed. We never ask you to connect a wallet.
+          </p>
+          <p className="mt-1 pl-5 text-xs text-ink-400">
+            Read-only analysis · We never request your seed phrase.
+          </p>
+        </>
       )}
 
       {error && !card && (
@@ -168,12 +176,33 @@ export function TrustCheckWidget({ compact = false }: { compact?: boolean }) {
           </p>
           <h3 className="mt-1 text-lg font-semibold text-ink-50 sm:text-xl">{card.headline}</h3>
 
+          {/* Evidence-gated: this only renders at all when there's real
+              evidence behind it (reasons is only ever populated for red-tier
+              results - see the reasons field's comment in agent's types.ts).
+              A clean green/yellow result has nothing to show here, so no
+              "Why?" affordance appears for it at all - never a freeform
+              explanation standing in for evidence that doesn't exist. */}
           {card.tier === "red" && card.reasons.length > 0 && (
-            <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-ink-100">
-              {card.reasons.map((reason) => (
-                <li key={reason}>{reason}</li>
-              ))}
-            </ul>
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={() => setShowWhy((current) => !current)}
+                className="flex items-center gap-1.5 text-sm font-semibold text-ink-100 hover:text-ink-50"
+                aria-expanded={showWhy}
+              >
+                Why this result?
+                <ChevronDown
+                  className={cn("h-4 w-4 transition-transform", showWhy && "rotate-180")}
+                />
+              </button>
+              {showWhy && (
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-ink-100">
+                  {card.reasons.map((reason) => (
+                    <li key={reason}>{reason}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
           )}
 
           {(card.riskDisplay || card.trustDisplay || card.exposureDisplay) && (
