@@ -258,9 +258,29 @@ export async function getBitcoinAddressDashboard(
     );
   }
 
+  // `entry` existing is not enough - Blockchair can return a degraded/
+  // malformed entry (e.g. `entry.address` missing or `entry.transactions`
+  // not an array) while still responding HTTP 200. Silently substituting
+  // `{}`/`[]` here would make a genuinely-failed fetch indistinguishable
+  // from a real "balance is 0, wallet has no transactions" result -
+  // exactly the bug class that produced a fake "Balance: 0 BTC" for the
+  // Genesis wallet. Throwing here is the honest behavior: a malformed
+  // response is a failure, not a data point.
+  if (!entry.address || typeof entry.address !== "object") {
+    throw new Error(
+      `Blockchair returned a malformed dashboard entry (missing address stats) for address "${trimmedAddress}"`,
+    );
+  }
+
+  if (!Array.isArray(entry.transactions)) {
+    throw new Error(
+      `Blockchair returned a malformed dashboard entry (transactions is not an array) for address "${trimmedAddress}"`,
+    );
+  }
+
   return {
-    address: entry.address ?? {},
-    transactions: Array.isArray(entry.transactions) ? entry.transactions : [],
+    address: entry.address,
+    transactions: entry.transactions,
   };
 }
 
@@ -320,10 +340,33 @@ export async function getBitcoinXpubDashboard(
     );
   }
 
+  // Same honesty requirement as getBitcoinAddressDashboard above - a
+  // malformed xpub/addresses/transactions field on an HTTP-200 response is
+  // a failure, not "this xpub has 0 balance / 0 derived addresses / 0
+  // transactions." Throwing surfaces it as a real error instead of a
+  // confident-looking fake empty result.
+  if (!entry.xpub || typeof entry.xpub !== "object") {
+    throw new Error(
+      "Blockchair returned a malformed dashboard entry (missing xpub stats) for the provided extended public key",
+    );
+  }
+
+  if (!entry.addresses || typeof entry.addresses !== "object") {
+    throw new Error(
+      "Blockchair returned a malformed dashboard entry (missing derived addresses) for the provided extended public key",
+    );
+  }
+
+  if (!Array.isArray(entry.transactions)) {
+    throw new Error(
+      "Blockchair returned a malformed dashboard entry (transactions is not an array) for the provided extended public key",
+    );
+  }
+
   return {
-    xpub: entry.xpub ?? {},
-    addresses: entry.addresses ?? {},
-    transactions: Array.isArray(entry.transactions) ? entry.transactions : [],
+    xpub: entry.xpub,
+    addresses: entry.addresses,
+    transactions: entry.transactions,
   };
 }
 

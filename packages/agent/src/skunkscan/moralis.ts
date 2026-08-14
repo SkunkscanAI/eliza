@@ -180,9 +180,20 @@ export async function getEthereumBalance(
     { chain },
   );
 
+  // A missing/malformed balance field on an HTTP-200 response is a failed
+  // fetch, not a real $0 balance - the EVM twin of the Bitcoin
+  // getNativeBalance bug that produced a fake "Balance: 0 BTC" result.
+  // Throwing surfaces it as a real error instead of a confident-looking
+  // fake zero.
+  if (typeof data.balance !== "string") {
+    throw new Error(
+      "Moralis did not return a valid native balance for this address.",
+    );
+  }
+
   return {
     address: walletAddress,
-    wei: typeof data.balance === "string" ? data.balance : "0",
+    wei: data.balance,
   };
 }
 
@@ -273,8 +284,17 @@ export async function getEthereumTokenHoldings(
       throw error;
     }
 
-    const results = Array.isArray(data.result) ? data.result : [];
-    allTokens.push(...results);
+    // A non-array `result` on an HTTP-200 page is a malformed/degraded
+    // response, not "this page has 0 tokens" - real empty pages are `[]`,
+    // which passes Array.isArray fine. Silently substituting `[]` here
+    // would understate a wallet's real holdings without any error.
+    if (!Array.isArray(data.result)) {
+      throw new Error(
+        "Moralis returned a malformed token holdings response for this address.",
+      );
+    }
+
+    allTokens.push(...data.result);
 
     if (!data.cursor) {
       break;
@@ -367,8 +387,15 @@ export async function getEthereumNftHoldings(
       searchParams,
     );
 
-    const results = Array.isArray(data.result) ? data.result : [];
-    allNfts.push(...results);
+    // Same honesty requirement as getEthereumTokenHoldings above - a
+    // non-array `result` is a malformed page, not "0 NFTs on this page."
+    if (!Array.isArray(data.result)) {
+      throw new Error(
+        "Moralis returned a malformed NFT holdings response for this address.",
+      );
+    }
+
+    allNfts.push(...data.result);
 
     if (!data.cursor) {
       break;
@@ -612,9 +639,18 @@ export async function getEthereumTransactions(
     searchParams,
   );
 
-  const results = Array.isArray(data.result) ? data.result : [];
+  // A non-array `result` is a malformed response, not "0 transactions" -
+  // this function also backs getEthereumOldestTransaction's order=ASC&
+  // limit=1 call, so silently defaulting here previously meant a degraded
+  // response could report a real wallet as having no transaction history
+  // at all (age "unknown"/timestamp null) instead of surfacing an error.
+  if (!Array.isArray(data.result)) {
+    throw new Error(
+      "Moralis returned a malformed transaction history response for this address.",
+    );
+  }
 
-  const transactions = results
+  const transactions = data.result
     .map(toEthereumTransaction)
     .filter((transaction): transaction is EthereumTransaction => transaction !== null);
 

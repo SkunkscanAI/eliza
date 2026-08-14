@@ -145,35 +145,48 @@ function buildEvmRecentTransactions(rawTransactions: EthereumTransaction[]): {
   };
 }
 
-// Total-latency guard for the EVM chains (Ethereum/BSC/Base) only. Found via
-// the cross-chain unbounded-fetch audit: even with every individual holdings
-// cap in place (MAX_TOKEN_HOLDING_PAGES, MAX_NFT_HOLDING_PAGES,
-// MAX_TOKENS_PER_PRICE_REQUEST chunking), a maximally-large EVM wallet can
-// still make up to ~60 sequential, un-timeouted Moralis calls (20 token-
-// holding pages + 20 NFT-holding pages + 20 price chunks) - nothing
-// individually hangs, but nothing stops the sum from taking multiple
-// minutes either. Unlike the Solana/Bitcoin fixes, this doesn't thread an
+// Total-latency guard for the EVM chains (Ethereum/BSC/Base) and Bitcoin.
+// Found via the cross-chain unbounded-fetch audit: even with every
+// individual holdings cap in place (MAX_TOKEN_HOLDING_PAGES,
+// MAX_NFT_HOLDING_PAGES, MAX_TOKENS_PER_PRICE_REQUEST chunking), a
+// maximally-large EVM wallet can still make up to ~60 sequential,
+// un-timeouted Moralis calls (20 token-holding pages + 20 NFT-holding pages
+// + 20 price chunks) - nothing individually hangs, but nothing stops the
+// sum from taking multiple minutes either. This doesn't thread an
 // AbortController through every underlying fetch (a much larger change
-// across every moralis.ts function) - it races the whole investigation
-// against a deadline instead, so a caller gets a fast, clear failure rather
-// than an indefinite wait. Caveat, stated plainly rather than glossed over:
-// this does NOT cancel the in-flight Moralis calls when the race is lost -
-// investigateWalletInternal keeps running in the background and its result
-// is simply discarded, so a timed-out investigation still consumes the same
-// provider CU it would have without this guard. This fixes the caller-
-// facing symptom (a hung/502'd request), not the underlying API cost.
-const EVM_INVESTIGATION_TIMEOUT_MS = 60_000;
-const EVM_CHAINS_WITH_LATENCY_GUARD: ReadonlySet<SupportedChain> = new Set([
+// across every moralis.ts/blockchair.ts function) - it races the whole
+// investigation against a deadline instead, so a caller gets a fast, clear
+// failure rather than an indefinite wait. Caveat, stated plainly rather
+// than glossed over: this does NOT cancel the in-flight provider calls
+// when the race is lost - investigateWalletInternal keeps running in the
+// background and its result is simply discarded, so a timed-out
+// investigation still consumes the same provider cost it would have
+// without this guard. This fixes the caller-facing symptom (a hung/502'd
+// request), not the underlying API cost.
+//
+// Bitcoin was added after a real incident: the Genesis wallet
+// (extremely high transaction count, real ongoing activity) had no
+// investigation-level timeout at all, so a slow Blockchair response for
+// it could hang indefinitely instead of failing fast and honestly - the
+// same class of problem this guard already solved for the EVM chains.
+// Solana isn't included: its own per-call AbortController-based timeout
+// (TOKEN_HOLDINGS_TIMEOUT_MS in helius.ts) already bounds its slowest
+// path directly, and every other Helius call is a single bounded request,
+// not an unbounded page-walk like Moralis's/Blockchair's holdings/history
+// endpoints.
+const INVESTIGATION_TIMEOUT_MS = 60_000;
+const CHAINS_WITH_LATENCY_GUARD: ReadonlySet<SupportedChain> = new Set([
   "ethereum",
   "bnb",
   "base",
+  "bitcoin",
 ]);
 
 export async function investigateWallet(
   chain: SupportedChain,
   address: string,
 ): Promise<WalletInvestigationResult> {
-  if (!EVM_CHAINS_WITH_LATENCY_GUARD.has(chain)) {
+  if (!CHAINS_WITH_LATENCY_GUARD.has(chain)) {
     return investigateWalletInternal(chain, address);
   }
 
@@ -195,10 +208,10 @@ export async function investigateWallet(
         status: "error",
         summary: "Wallet investigation timed out.",
         warnings: [
-          `This investigation did not complete within ${EVM_INVESTIGATION_TIMEOUT_MS / 1000}s. This usually means the wallet holds an extremely large number of distinct tokens and/or NFTs. Try again - a transient slowdown on the data provider's side is also possible - or note that this wallet may not be fully investigable within a reasonable time.`,
+          `This investigation did not complete within ${INVESTIGATION_TIMEOUT_MS / 1000}s. This usually means the wallet has an extremely large number of distinct tokens, NFTs, and/or transactions. Try again - a transient slowdown on the data provider's side is also possible - or note that this wallet may not be fully investigable within a reasonable time.`,
         ],
       });
-    }, EVM_INVESTIGATION_TIMEOUT_MS);
+    }, INVESTIGATION_TIMEOUT_MS);
   });
 
   try {
@@ -559,7 +572,6 @@ investmentStyle,
 profitability,
 reputation,
 skunkScore,
-executiveVerdict,
 summary: `Wallet found. Current balance: ${balance.sol.toFixed(
   6,
 )} SOL. Recent transaction sample: ${recentTransactions.length}.`,
@@ -866,7 +878,6 @@ warnings: investigationWarnings,
           profitability,
           reputation,
           skunkScore,
-          executiveVerdict,
           summary: `Wallet found. Current balance: ${ethBalance.toFixed(
             6,
           )} ETH. Recent transaction sample: ${nonSpamRecentTransactions.length}.`,
@@ -1168,7 +1179,6 @@ warnings: investigationWarnings,
           profitability,
           reputation,
           skunkScore,
-          executiveVerdict,
           summary: `Wallet found. Current balance: ${bnbBalance.toFixed(
             6,
           )} BNB. Recent transaction sample: ${nonSpamRecentTransactions.length}.`,
@@ -1474,7 +1484,6 @@ warnings: investigationWarnings,
           profitability,
           reputation,
           skunkScore,
-          executiveVerdict,
           summary: `Wallet found. Current balance: ${ethBalance.toFixed(
             6,
           )} ETH. Recent transaction sample: ${nonSpamRecentTransactions.length}.`,

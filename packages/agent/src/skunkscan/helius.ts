@@ -241,7 +241,18 @@ export async function getSolanaRecentSignatures(
       ],
     );
 
-  return Array.isArray(result) ? result : [];
+  // A non-array result is a malformed RPC response, not "0 signatures" -
+  // real empty results are already `[]`, which passes Array.isArray.
+  // Silently substituting `[]` here would understate a wallet's real
+  // transaction history without any error, the same bug class found in
+  // Bitcoin's connector (see blockchair.ts's dashboard functions).
+  if (!Array.isArray(result)) {
+    throw new Error(
+      "Helius returned a malformed getSignaturesForAddress response.",
+    );
+  }
+
+  return result;
 }
 
 // sort-order=asc&limit=1 is a genuine single-call, server-side ascending
@@ -279,9 +290,18 @@ export async function getSolanaOldestKnownSignature(
   const transactions =
     (await response.json()) as SolanaParsedTransaction[];
 
-  const oldest = Array.isArray(transactions)
-    ? transactions[0]
-    : undefined;
+  // A non-array response here is malformed, not "this wallet has no
+  // transactions" - a genuinely empty result is a real `[]`, which is
+  // handled correctly below (oldest undefined -> signature/blockTime null,
+  // a legitimate "never used" result). Silently treating malformed the
+  // same as empty would report a wallet with real history as brand new.
+  if (!Array.isArray(transactions)) {
+    throw new Error(
+      "Helius returned a malformed oldest-transaction response.",
+    );
+  }
+
+  const oldest = transactions[0];
 
   return {
     signature: oldest?.signature ?? null,
@@ -324,7 +344,16 @@ export async function getSolanaParsedTransactions(
 
   const data = await response.json();
 
-  return Array.isArray(data) ? data : [];
+  // A non-array response is malformed, not "none of these transactions
+  // parsed" - silently returning [] here degrades funding/relationships/
+  // exposure/age evidence without surfacing an error.
+  if (!Array.isArray(data)) {
+    throw new Error(
+      "Helius returned a malformed transaction batch-parse response.",
+    );
+  }
+
+  return data;
 }
 
 export type SolanaTokenHolding = {
@@ -399,8 +428,16 @@ export async function getSolanaTokenHoldings(
     throw error;
   }
 
+  // Distinct from the AbortError branch above (a genuine timeout, honestly
+  // surfaced as truncated:true) - this is a non-array result for some OTHER
+  // reason, i.e. a malformed response. Previously this silently reported
+  // "truncated: false, totalCount: 0" - a confident "wallet holds 0 token
+  // accounts" claim indistinguishable from a real empty wallet. Throwing
+  // matches getSolanaBalance's existing correct pattern in this same file.
   if (!Array.isArray(accounts)) {
-    return { holdings: [], truncated: false, totalCount: 0 };
+    throw new Error(
+      "Helius returned a malformed getTokenAccountsByOwner response.",
+    );
   }
 
   const holdings = accounts
@@ -634,8 +671,18 @@ export async function getSolanaNftHoldings(
 
   const items = data.result?.items;
 
+  // Same honesty requirement as the other Helius functions above - a
+  // missing/malformed `items` field is a malformed response, not "this
+  // wallet holds 0 NFTs." NFT holdings are supplementary display data
+  // (not used by any analyzer - see wallet.ts's tolerance comment), so a
+  // thrown error here still degrades to an empty list at the connector
+  // boundary rather than failing the whole investigation - but it does so
+  // via an honest error path, not by pretending this function itself
+  // succeeded with real data.
   if (!Array.isArray(items)) {
-    return [];
+    throw new Error(
+      "Helius returned a malformed getAssetsByOwner response.",
+    );
   }
 
   return items
