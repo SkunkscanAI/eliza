@@ -1,5 +1,6 @@
 import { analyzeWalletActivity } from "../analyzers/activity";
 import { analyzeWalletAge } from "../analyzers/walletAge";
+import { analyzeWalletDormancy } from "../analyzers/walletDormancy";
 import { analyzeWalletAssessment } from "../analyzers/assessment";
 import { analyzeWalletBehavior } from "../analyzers/behavior";
 import { analyzeWalletCaseSummary } from "../analyzers/caseSummary";
@@ -56,6 +57,8 @@ export async function runWalletPipeline(
     input.oldestTransactionId,
     input.oldestTransactionTimestamp,
   );
+
+  const dormancy = analyzeWalletDormancy(activity.lastActiveAt);
 
   const funding = analyzeWalletFunding(
     input.chain,
@@ -255,6 +258,7 @@ export async function runWalletPipeline(
       portfolio,
       activity,
       age,
+      dormancy,
       funding,
       defi,
       exposure,
@@ -270,6 +274,7 @@ export async function runWalletPipeline(
       input.address,
       activity,
       age,
+      dormancy,
       funding,
       portfolio,
       defi,
@@ -344,6 +349,7 @@ export async function runWalletPipeline(
   return {
     activity,
     age,
+    dormancy,
     funding,
     portfolio,
     risk,

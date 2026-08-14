@@ -4,10 +4,12 @@ export function analyzeWalletAge(
   firstKnownTransactionId: string | null,
   firstKnownTransactionTime: number | null,
 ): WalletAgeSummary {
-  if (
-    !firstKnownTransactionId ||
-    firstKnownTransactionTime === null
-  ) {
+  // firstKnownTransactionId is optional context, not a gate - some
+  // sources (Bitcoin's connector, via Blockchair's first_seen_receiving/
+  // first_seen_spending address stats) supply an authoritative first-
+  // activity timestamp without a specific transaction hash attached to
+  // it. The timestamp alone is enough to classify age.
+  if (firstKnownTransactionTime === null) {
     return {
       firstKnownTransaction: null,
       firstKnownTransactionAt: null,

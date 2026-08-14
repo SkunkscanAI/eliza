@@ -378,29 +378,34 @@ export class BitcoinBlockchainConnector implements BlockchainConnector {
     try {
       const trimmedAddress = address.trim();
 
-      // Blockchair's dashboards return the most recent transactions first,
-      // with no server-side "give me the oldest" option (unlike Moralis's
-      // order=ASC for EVM) - the oldest transaction within the returned
-      // page is the closest available approximation, not the wallet's
-      // true first-ever transaction if it has more history than one page
-      // covers. Disclosed via the warning below, not silently assumed.
-      // Requests the full MAX_TRANSACTION_LIMIT-sized page (not the
-      // smaller default) specifically because a bigger page directly
-      // improves this approximation's accuracy, at the same flat request
-      // cost as a small one.
-      const rawTransactions = isBitcoinXpub(trimmedAddress)
-        ? (
-            await getBitcoinXpubDashboard(trimmedAddress, {
-              limit: MAX_TRANSACTION_LIMIT,
-            })
-          ).transactions
-        : (
-            await getBitcoinAddressDashboard(trimmedAddress, {
-              limit: MAX_TRANSACTION_LIMIT,
-            })
-          ).transactions;
+      // Blockchair's dashboard stats (first_seen_receiving/
+      // first_seen_spending, on the address/xpub object itself) are
+      // computed by Blockchair's own indexer against the address's
+      // complete on-chain history - unlike scanning a page of
+      // transactions (which only sees however many the page covers),
+      // these stats are present on every dashboard response regardless
+      // of transaction count, so a wallet with far more history than any
+      // single page (e.g. the Bitcoin Genesis address) is not
+      // misrepresented as newer than it is. limit:1 keeps the request
+      // cheap - only the stats object is needed here, not the
+      // transaction list.
+      const stats = isBitcoinXpub(trimmedAddress)
+        ? (await getBitcoinXpubDashboard(trimmedAddress, { limit: 1 })).xpub
+        : (await getBitcoinAddressDashboard(trimmedAddress, { limit: 1 }))
+            .address;
 
-      if (rawTransactions.length === 0) {
+      const firstReceivingAt = parseBlockchairTimestamp(
+        stats.first_seen_receiving ?? undefined,
+      );
+      const firstSpendingAt = parseBlockchairTimestamp(
+        stats.first_seen_spending ?? undefined,
+      );
+
+      const candidateTimestamps = [firstReceivingAt, firstSpendingAt].filter(
+        (value): value is number => value !== null,
+      );
+
+      if (candidateTimestamps.length === 0) {
         return createSuccessResult({
           chainId: BITCOIN_CHAIN_ID,
           address: trimmedAddress,
@@ -411,26 +416,18 @@ export class BitcoinBlockchainConnector implements BlockchainConnector {
         });
       }
 
-      const oldestInPage = rawTransactions[rawTransactions.length - 1];
-      const transaction = createUniversalTransaction(oldestInPage);
-
-      return createSuccessResult(
-        {
-          chainId: BITCOIN_CHAIN_ID,
-          address: trimmedAddress,
-          transactionId: oldestInPage.hash,
-          transaction,
-          timestamp: transaction.timestamp ?? null,
-          retrievedAt: new Date().toISOString(),
-        },
-        [
-          {
-            code: "BITCOIN_OLDEST_TRANSACTION_APPROXIMATE",
-            message:
-              "This is the oldest transaction within the most recent page of results, not necessarily the wallet's true first-ever transaction - full-history pagination is not yet implemented for Bitcoin.",
-          },
-        ],
-      );
+      // No transaction hash is attached - this is a stat about the
+      // address, not one specific transaction record. analyzeWalletAge
+      // treats the timestamp itself as sufficient (transactionId is
+      // optional context there).
+      return createSuccessResult({
+        chainId: BITCOIN_CHAIN_ID,
+        address: trimmedAddress,
+        transactionId: null,
+        transaction: null,
+        timestamp: Math.min(...candidateTimestamps),
+        retrievedAt: new Date().toISOString(),
+      });
     } catch (error) {
       return createErrorResult(error, "BITCOIN_OLDEST_TRANSACTION_FAILED");
     }

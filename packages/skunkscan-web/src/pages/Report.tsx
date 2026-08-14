@@ -25,6 +25,11 @@ const SUPPORTED_CHAINS = ["solana", "ethereum", "base", "bnb", "bitcoin"] as con
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type FullReport = Record<string, any>;
 
+function formatUnixDate(unixSeconds: unknown): string | null {
+  if (typeof unixSeconds !== "number") return null;
+  return new Date(unixSeconds * 1000).toISOString().slice(0, 10);
+}
+
 export function Report() {
   const { chain, address } = useParams<{ chain: string; address: string }>();
   const [report, setReport] = useState<FullReport | null>(null);
@@ -80,6 +85,7 @@ export function Report() {
     executiveVerdict,
     balance,
     age,
+    dormancy,
     activity,
     portfolio,
     nftHoldings,
@@ -129,7 +135,21 @@ export function Report() {
           <StatGrid
             stats={[
               { label: "Balance", value: `${balance?.nativeAmount?.toLocaleString() ?? "-"} ${balance?.nativeSymbol ?? ""}` },
-              { label: "Wallet age", value: age?.classification ?? "unknown" },
+              {
+                label: "Wallet age",
+                value: age?.classification ?? "unknown",
+                note: formatUnixDate(age?.firstKnownTransactionAt)
+                  ? `First known transaction: ${formatUnixDate(age?.firstKnownTransactionAt)}`
+                  : undefined,
+              },
+              {
+                label: "Dormancy",
+                value: dormancy?.classification ?? "unknown",
+                note:
+                  typeof dormancy?.daysSinceLastActivity === "number"
+                    ? `${dormancy.daysSinceLastActivity} day(s) since last activity`
+                    : undefined,
+              },
               { label: "Activity level", value: activity?.activityLevel ?? "unknown" },
               { label: "Recommendation", value: executiveVerdict?.recommendation ?? "-" },
             ]}
@@ -145,7 +165,14 @@ export function Report() {
           <StatGrid
             stats={[
               { label: "Estimated value", value: portfolio?.estimatedTotalUsdValue != null ? `$${portfolio.estimatedTotalUsdValue.toLocaleString()}` : "Unavailable" },
-              { label: "Token count", value: String(portfolio?.tokenCount ?? 0) },
+              {
+                label: "Token count",
+                value: String(portfolio?.tokenCount ?? 0),
+                note:
+                  chain === "bitcoin"
+                    ? "Bitcoin has no native token standard to check - not a checked-and-empty result."
+                    : undefined,
+              },
               { label: "Diversity", value: portfolio?.diversityApplicable === false ? "N/A for this chain" : (portfolio?.diversityLevel ?? "unknown") },
               { label: "Concentration", value: portfolio?.concentrationLevel ?? "unknown" },
               { label: "NFTs held", value: String(nftHoldings?.length ?? 0) },

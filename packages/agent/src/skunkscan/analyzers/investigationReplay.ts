@@ -3,6 +3,7 @@ import {
   WalletActivitySummary,
   WalletAgeSummary,
   WalletDeFiSummary,
+  WalletDormancySummary,
   WalletExposureSummary,
   WalletFundingSummary,
   WalletInvestigationReplayStep,
@@ -17,6 +18,7 @@ export function analyzeInvestigationReplay(
   portfolio: WalletPortfolioSummary,
   activity: WalletActivitySummary,
   age: WalletAgeSummary,
+  dormancy: WalletDormancySummary,
   funding: WalletFundingSummary,
   defi: WalletDeFiSummary,
   exposure: WalletExposureSummary,
@@ -140,6 +142,17 @@ export function analyzeInvestigationReplay(
       title: "Intelligence brief prepared",
       description:
         "Evidence, confidence, key findings, and information gaps were prepared for the user.",
+    },
+    {
+      step: 13,
+      stage: "dormancy",
+      status:
+        dormancy.classification === "unknown"
+          ? "limited"
+          : "completed",
+      title: "Wallet dormancy analyzed",
+      description:
+        `Wallet dormancy classification is ${dormancy.classification}.`,
     },
   ];
 }
