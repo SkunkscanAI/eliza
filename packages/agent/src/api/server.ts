@@ -1912,10 +1912,18 @@ async function handleRequest(
     blueBubblesWebhookPath != null && pathname === blueBubblesWebhookPath;
   // The free Trust Check summary is the always-visible product surface that
   // sits in front of the paywall (see analyzers/trustCheckCard.ts) - it has
-  // to be reachable without the shared ELIZA_API_TOKEN, unlike the full
-  // paid investigation at /api/skunkscan/wallet, which stays gated.
+  // to be reachable without the shared ELIZA_API_TOKEN.
   const isSkunkScanTrustCheckEndpoint =
     method === "POST" && pathname === "/api/skunkscan/trust-check";
+  // TEMPORARY: unlocked pending Milestone 4 (accounts/entitlements/payment).
+  // Once real gating exists, this route must be re-secured behind real
+  // user-entitlement checks, not the shared ELIZA_API_TOKEN, since
+  // /trust-check is meant to stay free/token-less while /wallet is meant to
+  // become paid-only. Exempted now so the full investigation report page
+  // (packages/skunkscan-web's /report/[chain]/[address]) can call it while
+  // it's genuinely unlocked, same as trust-check.
+  const isSkunkScanWalletEndpoint =
+    method === "POST" && pathname === "/api/skunkscan/wallet";
   const isAuthProtectedPath = isAuthProtectedRoute(pathname);
 
   const canonicalizeRestartReason = (reason: string): string => {
@@ -2059,6 +2067,7 @@ async function handleRequest(
     !isWhatsAppWebhookEndpoint &&
     !isBlueBubblesWebhookEndpoint &&
     !isSkunkScanTrustCheckEndpoint &&
+    !isSkunkScanWalletEndpoint &&
     !isPublicRuntimePluginRoute({
       runtime: state.runtime,
       method,
