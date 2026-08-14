@@ -1,12 +1,11 @@
 import { Link } from "react-router-dom";
 
-// Changelog is still Milestone 3 - deliberately not linked yet, same
-// "only link to routes that exist" discipline as the rest of this site.
 const SECONDARY_LINKS = [
   { to: "/faq", label: "FAQ" },
   { to: "/contact", label: "Contact" },
   { to: "/terms", label: "Terms" },
   { to: "/privacy", label: "Privacy" },
+  { to: "/changelog", label: "Changelog" },
 ];
 
 export function Footer() {
