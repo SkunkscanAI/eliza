@@ -3,7 +3,7 @@ const SECTIONS = [
   { id: "portfolio", label: "Portfolio" },
   { id: "defi", label: "DeFi Activity" },
   { id: "risk-signals", label: "Risk & Trust" },
-  { id: "sub-scores", label: "Sub-Scores" },
+  { id: "sub-scores", label: "SkunkScore" },
   { id: "relationships", label: "Relationships" },
   { id: "evidence", label: "Evidence Register" },
   { id: "transactions", label: "Transactions" },
