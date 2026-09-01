@@ -121,11 +121,11 @@ export function Report() {
           Milestone 4 exists, gating wraps individual ReportSection children
           below; the section components themselves stay unchanged. */}
       <ReportSummaryBar
-        headline={executiveVerdict?.headline ?? skunkScore?.summary ?? "Investigation complete"}
+        headline={executiveVerdict?.headline ?? "Investigation complete"}
         verdict={executiveVerdict?.verdict ?? ""}
-        score={skunkScore?.score ?? 0}
-        displayScore={skunkScore?.displayScore ?? "-"}
-        stars={skunkScore?.stars ?? 0}
+        riskDisplay={executiveVerdict?.riskDisplay}
+        trustDisplay={executiveVerdict?.trustDisplay}
+        exposureDisplay={executiveVerdict?.exposureDisplay}
       />
 
       <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
@@ -263,7 +263,33 @@ export function Report() {
           )}
         </ReportSection>
 
-        <ReportSection id="sub-scores" title="Sub-Scores" subtitle="What SkunkScore is built from">
+        <ReportSection id="sub-scores" title="SkunkScore" subtitle="Long-term wallet quality - a separate signal from the Recommendation above">
+          {/* Deliberately its own card, separate from the Recommendation
+              banner at the top of the page - see ReportSummaryBar.tsx's
+              comment for why the two were split apart. This is SkunkScore's
+              home: the number, stars, and rating, plus the one sentence
+              that keeps a reader from mistaking it for a second verdict. */}
+          <div className="mb-6 flex flex-col gap-3 rounded-xl border border-ink-800 bg-ink-900/40 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+            <div className="flex items-center gap-4">
+              <span className="text-3xl font-bold text-ink-50">{skunkScore?.displayScore ?? "-"}</span>
+              <div>
+                <span aria-hidden="true" className="text-lg text-ink-200">
+                  {"★".repeat(skunkScore?.stars ?? 0)}
+                  {"☆".repeat(5 - (skunkScore?.stars ?? 0))}
+                </span>
+                <p className="text-sm text-ink-400">
+                  {skunkScore?.recommendation ?? "SkunkScore unavailable"}
+                </p>
+              </div>
+            </div>
+          </div>
+          <p className="mb-6 text-sm text-ink-200 sm:text-base">
+            SkunkScore measures this wallet's overall long-term quality and reputation - trust
+            history, smart-money behavior, and profitability. It's a separate question from the
+            Recommendation at the top of this report, which reflects only immediate transaction
+            risk. A wallet can be safe to transact with right now while still scoring lower here,
+            or the reverse.
+          </p>
           <Link
             to="/understanding-your-report"
             className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-signal-green hover:text-signal-green-dark"
@@ -271,6 +297,7 @@ export function Report() {
             What do these 14 scores actually mean?
             <ArrowRight className="h-4 w-4" />
           </Link>
+          <h3 className="mb-3 text-sm font-semibold text-ink-50">What SkunkScore is built from</h3>
           <div className="mb-6 overflow-x-auto">
             <table className="w-full min-w-[420px] text-left text-sm">
               <thead>
