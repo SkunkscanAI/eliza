@@ -153,12 +153,24 @@ export function Report() {
                     : undefined,
               },
               { label: "Activity level", value: activity?.activityLevel ?? "unknown" },
-              { label: "Recommendation", value: executiveVerdict?.recommendation ?? "-" },
+              {
+                label: "Recommendation",
+                value: executiveVerdict?.recommendation ?? "-",
+                // suggestedAction is a full sentence, not a fragment - for a
+                // positive/clean recommendation it already names the sources
+                // this reflects (see executiveVerdict.ts's buildSuggestedAction),
+                // so the same-breath disclosure lands right on the stat
+                // itself, not only in the list below.
+                note: executiveVerdict?.suggestedAction,
+              },
             ]}
           />
           {executiveVerdict?.why?.length > 0 && (
             <div className="mt-6">
-              <SignalList items={executiveVerdict.why} />
+              <p className="text-sm font-semibold text-ink-50">Why this recommendation</p>
+              <div className="mt-2">
+                <SignalList items={executiveVerdict.why} />
+              </div>
             </div>
           )}
         </ReportSection>
@@ -231,7 +243,12 @@ export function Report() {
               title="Exposure"
               level={exposure?.exposureLevel ?? "unknown"}
               displayScore={`${exposure?.exposureScore ?? 0}/100`}
-              limitations={exposure?.limitations}
+              // Was reading exposure?.limitations, a field that doesn't
+              // exist on WalletExposureSummary (the real field is `notes`)
+              // - this line has been silently rendering nothing since the
+              // Exposure card was added. Real bug, unrelated to this pass;
+              // fixed here since it's the exact card being touched.
+              limitations={exposure?.notes}
             />
             <ScoreCard
               title="Custody"
@@ -251,14 +268,39 @@ export function Report() {
           {complianceScreening && (
             <div className="mt-6 rounded-lg border border-ink-800 p-4">
               <h3 className="text-sm font-semibold text-ink-50">Compliance Screening</h3>
-              <StatGrid
-                stats={[
-                  { label: "Scam", value: complianceScreening.scamStatus?.replace(/_/g, " ") ?? "unknown" },
-                  { label: "Rug pull", value: complianceScreening.rugPullStatus?.replace(/_/g, " ") ?? "unknown" },
-                  { label: "Suspicious", value: complianceScreening.suspiciousStatus?.replace(/_/g, " ") ?? "unknown" },
-                  { label: "Sanctions", value: complianceScreening.sanctionsStatus?.replace(/_/g, " ") ?? "unknown" },
-                ]}
-              />
+              {(() => {
+                // Names the real source behind each status pill instead of
+                // a bare "no match in connected sources" enum, reading
+                // straight from sourcesChecked (the same real, live source
+                // list compliance.ts builds) rather than a hardcoded name -
+                // so this can't drift if a source's name or category ever
+                // changes server-side.
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const sourceNameForCategory = (category: string) =>
+                  complianceScreening.sourcesChecked?.find(
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (source: any) => source.category === category,
+                  )?.name;
+
+                const internalRegistryName = sourceNameForCategory("internal_registry");
+                const sanctionsSourceName = sourceNameForCategory("sanctions");
+
+                const withSource = (status: string | undefined, sourceName: string | undefined) => {
+                  const label = status?.replace(/_/g, " ") ?? "unknown";
+                  return sourceName ? `${label} (${sourceName})` : label;
+                };
+
+                return (
+                  <StatGrid
+                    stats={[
+                      { label: "Scam", value: withSource(complianceScreening.scamStatus, internalRegistryName) },
+                      { label: "Rug pull", value: withSource(complianceScreening.rugPullStatus, internalRegistryName) },
+                      { label: "Suspicious", value: withSource(complianceScreening.suspiciousStatus, internalRegistryName) },
+                      { label: "Sanctions", value: withSource(complianceScreening.sanctionsStatus, sanctionsSourceName) },
+                    ]}
+                  />
+                );
+              })()}
               {/* Previously the 4 status pills above were the only thing
                   shown here - a "no match" pill with zero indication of
                   which sources were actually checked. complianceScreening
