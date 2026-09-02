@@ -3,6 +3,7 @@ import {
   WalletTrustCheckCard,
   WalletTrustCheckTier,
 } from "../types";
+import { buildScopeDisclosure } from "./sourceDisclosure";
 
 // Maps the existing 4-value executiveVerdict.verdict onto the 3-tier
 // green/yellow/red Trust Check card. "review" and "investigate" collapse
@@ -47,6 +48,7 @@ export function buildTrustCheckCard(
     riskDisplay: verdict?.riskDisplay,
     trustDisplay: verdict?.trustDisplay,
     exposureDisplay: verdict?.exposureDisplay,
+    scopeDisclosure: buildScopeDisclosure(result.complianceScreening?.sourcesChecked),
     warnings: result.warnings,
   };
 }

@@ -44,6 +44,7 @@ type TrustCheckCard = {
   riskDisplay?: string;
   trustDisplay?: string;
   exposureDisplay?: string;
+  scopeDisclosure: string;
   warnings: string[];
 };
 
@@ -175,6 +176,14 @@ export function TrustCheckWidget({ compact = false }: { compact?: boolean }) {
             {TIER_STYLE[card.tier].label}
           </p>
           <h3 className="mt-1 text-lg font-semibold text-ink-50 sm:text-xl">{card.headline}</h3>
+
+          {/* Shown on every tier, not just red - a green/yellow result is
+              only ever "clean against what we checked," never a broader
+              guarantee, and that has to be said in the same breath as the
+              headline above, not buried in a separate limitations section. */}
+          {card.scopeDisclosure && (
+            <p className="mt-1 text-xs text-ink-400">{card.scopeDisclosure}</p>
+          )}
 
           {/* Evidence-gated: this only renders at all when there's real
               evidence behind it (reasons is only ever populated for red-tier
