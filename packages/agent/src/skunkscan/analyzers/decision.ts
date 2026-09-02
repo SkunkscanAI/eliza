@@ -8,6 +8,7 @@ import {
   WalletTrustSummary,
 } from "../types";
 import { createConfidenceResponse } from "../confidence/framework";
+import { describeConnectedSources, getSystemSourcesChecked } from "./sourceDisclosure";
 
 export function analyzeWalletDecision(
   evidenceRecords: WalletEvidenceRecord[],
@@ -82,7 +83,10 @@ export function analyzeWalletDecision(
           : exposure.exposureLevel === "low"
             ? 10
             : 10,
-    description: `Wallet exposure level is ${exposure.exposureLevel}.`,
+    description:
+      exposure.exposureLevel === "none"
+        ? `Wallet exposure level is none, checked against ${describeConnectedSources(getSystemSourcesChecked())}.`
+        : `Wallet exposure level is ${exposure.exposureLevel}.`,
     evidenceRecordIds: findEvidenceId("exposure-summary"),
   });
 
