@@ -27,8 +27,9 @@ export function About() {
         <h1 className="text-3xl font-bold text-ink-50 sm:text-4xl">About SkunkScan</h1>
         <p className="mt-4 text-base text-ink-200 sm:text-lg">
           SkunkScan exists for one moment: right before you send crypto to an address you're not
-          sure about. The SkunkScan team built it to answer that moment honestly - with real
-          on-chain evidence, no guessing, and no pretending to know more than we do.
+          sure about - or before you accept it from one. The SkunkScan team built it to answer
+          that moment honestly - with real on-chain evidence, no guessing, and no pretending to
+          know more than we do.
         </p>
       </section>
 

@@ -30,11 +30,11 @@ export function Home() {
       <section className="mx-auto max-w-5xl px-4 pt-12 pb-8 sm:px-6 sm:pt-20 sm:pb-12">
         <div className="mx-auto max-w-2xl text-center">
           <h1 className="text-3xl font-bold tracking-tight text-ink-50 sm:text-5xl">
-            Skunk it before you send it.
+            Skunk it before you trust it.
           </h1>
           <p className="mt-4 text-base text-ink-200 sm:text-lg">
             Paste a wallet address and get a free, plain-language risk check before you send
-            crypto to it. No account, no wallet connection, no catch.
+            crypto to it — or receive it from it. No account, no wallet connection, no catch.
           </p>
         </div>
 
@@ -95,7 +95,7 @@ export function Home() {
             <p className="mt-1 text-ink-200">
               A low-risk result is not a guarantee of safety - it means no evidence of risk was
               found in what SkunkScan was able to check. Always use your own judgment before
-              sending funds.
+              sending or receiving funds.
             </p>
           </div>
 
