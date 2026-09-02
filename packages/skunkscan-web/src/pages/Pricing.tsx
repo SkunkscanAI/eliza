@@ -17,7 +17,7 @@ const TIERS: Tier[] = [
     name: "Free",
     price: "€0",
     cadence: "",
-    description: "A quick, honest read before you send.",
+    description: "A quick, honest read before you send or get paid.",
     features: ["Trust Check verdict (green / yellow / red)", "Risk, trust, and exposure summary", "All 5 supported chains"],
     cta: "Check a wallet",
   },

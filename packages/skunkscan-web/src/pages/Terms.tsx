@@ -41,7 +41,8 @@ export function Terms() {
             financial advice, investment advice, or legal advice, and it does not establish the
             identity, intent, or legality of any wallet's owner or activity. A "low risk" result
             is not a guarantee of safety - it means no evidence of risk was found in what
-            SkunkScan was able to check. Always use your own judgment before sending funds.
+            SkunkScan was able to check. Always use your own judgment before sending or receiving
+            funds.
           </p>
         </LegalSection>
 
