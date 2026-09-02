@@ -196,14 +196,36 @@ export function analyzeWalletExposure(
     (match) => match.category === "rug_pull",
   );
 
+  // Deliberately its own bucket, separate from suspicious/adverse_media
+  // below - a sanctions match is an external, authoritative government
+  // designation (OFAC's SDN list), not one of SkunkScan's own heuristic
+  // classifications the way scam/rug_pull/suspicious are. It should never
+  // score identically to a heuristic "suspicious" pattern - see the
+  // weighting rationale below.
+  const hasKnownSanctionedExposure = scoringEligibleMatches.some(
+    (match) => match.category === "sanctioned",
+  );
+
   const hasKnownSuspiciousExposure = scoringEligibleMatches.some(
     (match) =>
       match.category === "suspicious" ||
-      match.category === "sanctioned" ||
       match.category === "adverse_media",
   );
 
   let exposureScore = 0;
+
+  // 70, not merely "higher than scam's 50" - deliberately high enough that
+  // a single sanctioned match alone crosses the exposureLevel "high"
+  // threshold (>=60) on its own, unlike scam's 50 (which alone only
+  // reaches "medium" unless stacked with another signal). scam/rug_pull
+  // are SkunkScan's own forensic conclusions from independently-verified
+  // on-chain evidence - real, but still an inference. A sanctions
+  // designation is an external fact stated by a government authority, not
+  // an inference - it should not require corroboration from another
+  // signal to be treated as severe.
+  if (hasKnownSanctionedExposure) {
+    exposureScore += 70;
+  }
 
   if (hasKnownScamExposure) {
     exposureScore += 50;
@@ -295,6 +317,7 @@ export function analyzeWalletExposure(
     confidence,
     hasKnownScamExposure,
     hasKnownRugPullExposure,
+    hasKnownSanctionedExposure,
     hasKnownSuspiciousExposure,
     matches,
     notes,
