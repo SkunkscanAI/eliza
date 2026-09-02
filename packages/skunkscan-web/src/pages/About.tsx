@@ -16,7 +16,7 @@ const PRINCIPLES = [
   },
   {
     title: "We tell you what we don't cover",
-    body: "Every chain has real, disclosed gaps - some structural (Bitcoin has no fungible-token standard), some just not built yet (external sanctions screening). We'd rather you see the honest edge of what we know than assume our silence means \"nothing to worry about.\"",
+    body: "Every chain has real, disclosed gaps - some structural (Bitcoin has no fungible-token standard), some partially built (we self-host the US Treasury's OFAC sanctions list, but EU/UK/UN sanctions lists and commercial adverse-media screening aren't connected yet). We'd rather you see the honest edge of what we know than assume our silence means \"nothing to worry about.\"",
   },
 ];
 

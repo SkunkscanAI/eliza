@@ -259,6 +259,19 @@ export function Report() {
                   { label: "Sanctions", value: complianceScreening.sanctionsStatus?.replace(/_/g, " ") ?? "unknown" },
                 ]}
               />
+              {/* Previously the 4 status pills above were the only thing
+                  shown here - a "no match" pill with zero indication of
+                  which sources were actually checked. complianceScreening
+                  already computes this honestly server-side (see
+                  compliance.ts's sourcesChecked/limitations) but it was
+                  never rendered anywhere on the frontend. Rendering the
+                  real array directly, not new static copy, so this can
+                  never drift out of sync with what's actually connected. */}
+              {complianceScreening.limitations?.length > 0 && (
+                <div className="mt-4">
+                  <SignalList items={complianceScreening.limitations} tone="muted" />
+                </div>
+              )}
             </div>
           )}
         </ReportSection>
