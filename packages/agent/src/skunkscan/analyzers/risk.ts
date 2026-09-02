@@ -210,7 +210,7 @@ export function analyzeWalletRisk(
         title: "Low Calculated Wallet Risk",
 
         finding:
-          `The wallet currently has a low calculated risk level with an internal score of ${score} out of 100.`,
+          `The wallet currently has a low calculated risk level with an internal score of ${score} out of 100 - not a guarantee that the wallet is safe, legitimate, or free from undiscovered exposure, only a reflection of the blockchain evidence available at the time of investigation.`,
 
         whyItMatters:
           "The currently observed blockchain indicators contain few signals that materially increase the calculated wallet risk.",
@@ -225,10 +225,9 @@ export function analyzeWalletRisk(
           "risk-assessment",
         ],
 
-        limitations: [
-          "A low calculated risk level does not guarantee that the wallet is safe, legitimate, or free from undiscovered exposure.",
-          "The result reflects only the blockchain evidence and analytical rules available at the time of investigation.",
-        ],
+        // Both caveats that used to live here as separate limitations
+        // entries are now stated in the same sentence as the finding above.
+        limitations: [],
       }),
     );
   }

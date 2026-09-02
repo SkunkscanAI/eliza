@@ -5,7 +5,7 @@ import {
 import {
   createConfidenceResponse,
 } from "../confidence/framework";
-import { getSanctionsRegistryStatus } from "../exposure/sanctionsRegistry";
+import { getSystemSourcesChecked } from "./sourceDisclosure";
 
 export function analyzeWalletCompliance(
   exposure: WalletExposureSummary,
@@ -48,60 +48,15 @@ export function analyzeWalletCompliance(
   // first refresh completes, or a case where every refresh attempt has
   // failed, correctly reports "unavailable" rather than a false
   // "connected" that would make an unchecked wallet look clean.
-  const sanctionsRegistryStatus = getSanctionsRegistryStatus();
-
-  const sourcesChecked: WalletComplianceScreeningSummary["sourcesChecked"] = [
-    {
-      name: "SkunkScan Internal Registry",
-      category: "internal_registry",
-      status: "connected",
-      coverage: [
-        "Known scam wallets",
-        "Known rug pulls",
-        "Known suspicious wallets",
-      ],
-      lastUpdatedAt: null,
-      notes: ["Maintained by SkunkScan."],
-    },
-    {
-      name: "OFAC Sanctions List (SDN)",
-      category: "sanctions",
-      status: sanctionsRegistryStatus.connected ? "connected" : "unavailable",
-      // Deliberately OFAC only, not "OFAC, EU, UK, UN" - investigated
-      // directly and confirmed EU/UK do not publish crypto addresses in a
-      // free, reliably-structured form (EU: no consistent structured
-      // field, not even modeled by OpenSanctions' own multi-source
-      // aggregator; UK: addresses appear only in free-text fields, not a
-      // structured one) and UN does not appear to publish crypto addresses
-      // in any form. Overstating coverage here would be the same class of
-      // dishonesty already fixed elsewhere in this compliance pipeline.
-      coverage: [
-        "US Treasury OFAC Specially Designated Nationals (SDN) list",
-        "Bitcoin, Ethereum, BNB Chain, and Solana addresses directly",
-        "Base addresses indirectly, via Ethereum's shared 0x address format (not an OFAC-confirmed Base-specific designation)",
-      ],
-      lastUpdatedAt: sanctionsRegistryStatus.lastUpdatedAt,
-      notes: [
-        sanctionsRegistryStatus.connected
-          ? "Self-hosted from 0xB10C/ofac-sanctioned-digital-currency-addresses (MIT), refreshed periodically from the OFAC SDN list."
-          : "The OFAC sanctions list has not loaded successfully yet - sanctions screening is temporarily unavailable, not confirmed clean.",
-        "EU, UK, and UN sanctions lists are not connected: EU and UK do designate some crypto addresses, but not in a free, reliably-structured form suitable for self-hosting; UN does not appear to publish crypto addresses at all. Broader sanctions coverage would require a commercial provider that has done this linking work itself.",
-        "Only self, funding-wallet, and in-sample counterparty matches are checked against this list - unlike the internal registry above, sanctioned-address exposure is not backed by the reverse transaction-history index, since scanning 1,000+ addresses' full history is not feasible the way it is for a small hand-curated list.",
-      ],
-    },
-    {
-      name: "Adverse Media Provider",
-      category: "adverse_media",
-      status: "planned",
-      coverage: [
-        "News",
-        "Law enforcement",
-        "Regulatory actions",
-      ],
-      lastUpdatedAt: null,
-      notes: ["External provider integration planned."],
-    },
-  ];
+  //
+  // The wallet-independent source list itself now lives in
+  // sourceDisclosure.ts (getSystemSourcesChecked) so exposure.ts/trust.ts/
+  // risk.ts - which run before this function and can't import this file
+  // without a circular dependency - can build the same scope-disclosure
+  // text without duplicating these names as separate literals. Same
+  // fields, same values as before; only the definition moved.
+  const sourcesChecked: WalletComplianceScreeningSummary["sourcesChecked"] =
+    getSystemSourcesChecked();
 
   const confidenceAnalysis = createConfidenceResponse([
     {

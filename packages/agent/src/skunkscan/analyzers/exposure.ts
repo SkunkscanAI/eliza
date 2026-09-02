@@ -16,6 +16,7 @@ import {
 import {
   createConfidenceResponse,
 } from "../confidence/framework";
+import { describeConnectedSources, getSystemSourcesChecked } from "./sourceDisclosure";
 
 export function analyzeWalletExposure(
   // Accepts a single address (every existing caller - Ethereum/Solana/BSC/
@@ -284,7 +285,7 @@ export function analyzeWalletExposure(
   const notes =
     matches.length === 0
       ? [
-          "No known exposure was identified using the current exposure registry.",
+          `No known exposure was identified against ${describeConnectedSources(getSystemSourcesChecked())} - not a guarantee, and not a comprehensive screen.`,
         ]
       : [
           "Exposure assessment is based on known registry matches.",
