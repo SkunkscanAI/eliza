@@ -691,6 +691,7 @@ export type WalletExposureSummary = {
   confidence: "low" | "medium" | "high";
   hasKnownScamExposure: boolean;
   hasKnownRugPullExposure: boolean;
+  hasKnownSanctionedExposure: boolean;
   hasKnownSuspiciousExposure: boolean;
   matches: {
     address: string;
