@@ -35,7 +35,7 @@ export function analyzeInvestigationNarrative(
           decision.decision,
         )}. The recommended action is ${formatRecommendation(
           decision.recommendation,
-        )}.`,
+        )}. ${limitationsStatement}`,
 
       findings,
 

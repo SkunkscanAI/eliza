@@ -6,6 +6,7 @@ import {
   WalletExecutiveVerdict,
   WalletInvestigationReport,
 } from "../types";
+import { describeConnectedSources, getSystemSourcesChecked } from "./sourceDisclosure";
 
 export function analyzeInvestigationReport(
   chain: SupportedChain,
@@ -48,6 +49,6 @@ export function analyzeInvestigationReport(
     },
 
     disclaimer:
-      "This report is based on blockchain data and connected intelligence sources available at the time of screening. Conclusions are evidence-based assessments and should not be interpreted as guarantees or legal advice.",
+      `This report is based on ${chain} blockchain data and the sources checked against ${describeConnectedSources(getSystemSourcesChecked())}, available at the time of screening. Conclusions are evidence-based assessments and should not be interpreted as guarantees or legal advice.`,
   };
 }

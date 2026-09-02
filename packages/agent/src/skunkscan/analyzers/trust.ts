@@ -14,6 +14,7 @@ import {
 import { createInvestorInsight } from "../explainability/builder";
 import { INVESTOR_INSIGHT_TEMPLATES } from "../explainability/templates";
 import { InvestorEvidenceCollection } from "../explainability/evidenceCollection";
+import { describeConnectedSources, getSystemSourcesChecked } from "./sourceDisclosure";
 
 export function analyzeWalletTrust(
   age: WalletAgeSummary,
@@ -79,7 +80,7 @@ export function analyzeWalletTrust(
   if (exposure.exposureLevel === "none") {
     trustScore += 20;
     positiveSignals.push(
-      "No known exposure was identified.",
+      `No known exposure was identified against ${describeConnectedSources(getSystemSourcesChecked())}.`,
     );
   } else if (exposure.exposureLevel === "low") {
     trustScore += 8;
@@ -306,7 +307,7 @@ if (exposure.exposureLevel === "none") {
           .noKnownExposure.title,
 
       finding:
-        "No known scam, rug-pull, sanctioned, adverse-media, or suspicious exposure was identified in the currently connected intelligence sources.",
+        `No known scam, rug-pull, sanctioned, adverse-media, or suspicious exposure was identified against ${describeConnectedSources(getSystemSourcesChecked())} - not a guarantee, and not a comprehensive screen.`,
 
       whyItMatters:
         INVESTOR_INSIGHT_TEMPLATES
@@ -324,9 +325,10 @@ if (exposure.exposureLevel === "none") {
         "exposure-summary",
       ],
 
-      limitations: [
-        "This finding is limited to the exposure sources currently connected to SkunkScanAI.",
-      ],
+      // The source-scope caveat that used to live here as a separate
+      // limitations entry is now stated in the same sentence as the
+      // finding above, so it isn't repeated as a second, disconnected line.
+      limitations: [],
     }),
   );
 }
@@ -339,7 +341,7 @@ if (exposure.exposureLevel === "low") {
       title: "Limited Exposure Indicators",
 
       finding:
-        "Low-level exposure indicators were identified in the currently connected intelligence sources.",
+        `Low-level exposure indicators were identified against ${describeConnectedSources(getSystemSourcesChecked())}.`,
 
       whyItMatters:
         "Limited exposure may provide useful context, but its significance depends on the nature, direction, frequency, and timing of the identified interactions.",
@@ -357,7 +359,8 @@ if (exposure.exposureLevel === "low") {
 
       limitations: [
         "A low-level exposure indicator does not by itself establish ownership, intent, wrongdoing, or meaningful participation.",
-        "The result is limited to the intelligence sources currently connected to SkunkScanAI.",
+        // The source-scope caveat that used to be a second, separate line
+        // here is now stated in the same sentence as the finding above.
       ],
     }),
   );
@@ -659,8 +662,12 @@ function buildPositiveExplanation(
       case "Wallet has an identifiable funding wallet.":
         return "The origin of funding could be partially identified through blockchain analysis.";
 
-      case "No known exposure was identified.":
-        return "No known scam, rug-pull or suspicious exposure was identified in the connected intelligence sources.";
+      // No case for the exposure signal here anymore: since that signal
+      // (pushed above) now names the actually-connected sources inline and
+      // varies per wallet, it can no longer be matched by a fixed literal -
+      // it already reads as the honest, elaborated sentence this switch
+      // exists to produce, so it falls through to the default below
+      // unchanged rather than being re-templated with a vaguer phrase.
 
       case "Current risk level is low.":
         return "The calculated wallet risk remains low based on the currently available evidence.";
