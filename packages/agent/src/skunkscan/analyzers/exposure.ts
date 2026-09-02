@@ -1,5 +1,9 @@
 import { lookupStaticExposure } from "../exposure/staticRegistry";
 import {
+  ensureSanctionsRegistryStarted,
+  lookupSanctionsRegistry,
+} from "../exposure/sanctionsRegistry";
+import {
   getRegistryAddressScanCoverage,
   lookupReverseExposureIndex,
 } from "../exposure/reverseIndex";
@@ -26,6 +30,15 @@ export function analyzeWalletExposure(
   chain: SupportedChain,
   relationships: WalletRelationship[] = [],
 ): WalletExposureSummary {
+  // Idempotent - only actually starts the refresh timer on the first call
+  // per process. Not awaited: the first investigation(s) after a cold boot
+  // may run before the initial OFAC list load completes, in which case
+  // sanctions lookups below simply find no loaded list yet and return no
+  // match (not a false "clean" result - compliance.ts's sourcesChecked
+  // reports "unavailable", not "connected", until a load actually
+  // succeeds).
+  ensureSanctionsRegistryStarted();
+
   const walletAddresses =
     typeof walletAddress === "string" ? [walletAddress] : walletAddress;
 
@@ -39,7 +52,9 @@ export function analyzeWalletExposure(
   const matchedFlaggedAddresses = new Set<string>();
 
   for (const address of walletAddresses) {
-    const selfMatch = lookupStaticExposure(chain, address);
+    const selfMatch =
+      lookupStaticExposure(chain, address) ??
+      lookupSanctionsRegistry(chain, address);
 
     if (selfMatch && !matchedFlaggedAddresses.has(selfMatch.address)) {
       matches.push({
@@ -52,10 +67,9 @@ export function analyzeWalletExposure(
   }
 
   if (funding.fundingWallet) {
-    const fundingMatch = lookupStaticExposure(
-      chain,
-      funding.fundingWallet,
-    );
+    const fundingMatch =
+      lookupStaticExposure(chain, funding.fundingWallet) ??
+      lookupSanctionsRegistry(chain, funding.fundingWallet);
 
     if (fundingMatch) {
       matches.push({
@@ -71,9 +85,23 @@ export function analyzeWalletExposure(
   // Reverse-index check: an O(1) lookup of "every flagged address this
   // wallet has ever transacted with," precomputed by periodically
   // scanning the (small, fixed) set of flagged registry addresses' own
-  // transaction history (see exposure/buildReverseIndex.ts). This gives
-  // exposure coverage independent of the wallet's own sample depth - it
-  // doesn't depend on `relationships` at all.
+  // transaction history (see exposure/buildReverseIndex.ts). Deliberately
+  // NOT extended to the OFAC sanctions registry (~1,000+ Bitcoin addresses
+  // alone) - reverse-scanning every flagged address's full transaction
+  // history is only feasible for the existing handful of hand-curated
+  // scam/rug_pull entries; doing it for a list this size would mean
+  // thousands of provider calls per refresh. This is a real, disclosed
+  // coverage gap: a wallet whose only connection to a sanctioned address is
+  // a counterparty relationship outside this investigation's own parsed
+  // transaction sample (see relationships.ts's window) won't be caught by
+  // sanctions screening the way it would for a scam/rug_pull match - only
+  // self, funder, and in-sample counterparty matches are checked against
+  // OFAC data below.
+  //
+  // For the hand-curated scam/rug_pull/BALD/SQUID-style entries this
+  // reverse index still gives exposure coverage independent of the
+  // wallet's own sample depth - it doesn't depend on `relationships` at
+  // all.
   const partiallyScannedMatchLabels: string[] = [];
 
   for (const address of walletAddresses) {
@@ -130,10 +158,9 @@ export function analyzeWalletExposure(
       continue;
     }
 
-    const counterpartyMatch = lookupStaticExposure(
-      chain,
-      relationship.address,
-    );
+    const counterpartyMatch =
+      lookupStaticExposure(chain, relationship.address) ??
+      lookupSanctionsRegistry(chain, relationship.address);
 
     if (!counterpartyMatch) {
       continue;

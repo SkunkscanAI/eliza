@@ -5,6 +5,7 @@ import {
 import {
   createConfidenceResponse,
 } from "../confidence/framework";
+import { getSanctionsRegistryStatus } from "../exposure/sanctionsRegistry";
 
 export function analyzeWalletCompliance(
   exposure: WalletExposureSummary,
@@ -41,6 +42,14 @@ export function analyzeWalletCompliance(
     });
   }
 
+  // Real status, not hardcoded - "connected" only becomes true once the
+  // OFAC list has actually loaded successfully at least once (see
+  // sanctionsRegistry.ts). A cold-boot investigation that runs before the
+  // first refresh completes, or a case where every refresh attempt has
+  // failed, correctly reports "unavailable" rather than a false
+  // "connected" that would make an unchecked wallet look clean.
+  const sanctionsRegistryStatus = getSanctionsRegistryStatus();
+
   const sourcesChecked: WalletComplianceScreeningSummary["sourcesChecked"] = [
     {
       name: "SkunkScan Internal Registry",
@@ -55,12 +64,30 @@ export function analyzeWalletCompliance(
       notes: ["Maintained by SkunkScan."],
     },
     {
-      name: "Sanctions Provider",
+      name: "OFAC Sanctions List (SDN)",
       category: "sanctions",
-      status: "planned",
-      coverage: ["OFAC", "EU", "UK", "UN"],
-      lastUpdatedAt: null,
-      notes: ["External provider integration planned."],
+      status: sanctionsRegistryStatus.connected ? "connected" : "unavailable",
+      // Deliberately OFAC only, not "OFAC, EU, UK, UN" - investigated
+      // directly and confirmed EU/UK do not publish crypto addresses in a
+      // free, reliably-structured form (EU: no consistent structured
+      // field, not even modeled by OpenSanctions' own multi-source
+      // aggregator; UK: addresses appear only in free-text fields, not a
+      // structured one) and UN does not appear to publish crypto addresses
+      // in any form. Overstating coverage here would be the same class of
+      // dishonesty already fixed elsewhere in this compliance pipeline.
+      coverage: [
+        "US Treasury OFAC Specially Designated Nationals (SDN) list",
+        "Bitcoin, Ethereum, BNB Chain, and Solana addresses directly",
+        "Base addresses indirectly, via Ethereum's shared 0x address format (not an OFAC-confirmed Base-specific designation)",
+      ],
+      lastUpdatedAt: sanctionsRegistryStatus.lastUpdatedAt,
+      notes: [
+        sanctionsRegistryStatus.connected
+          ? "Self-hosted from 0xB10C/ofac-sanctioned-digital-currency-addresses (MIT), refreshed periodically from the OFAC SDN list."
+          : "The OFAC sanctions list has not loaded successfully yet - sanctions screening is temporarily unavailable, not confirmed clean.",
+        "EU, UK, and UN sanctions lists are not connected: EU and UK do designate some crypto addresses, but not in a free, reliably-structured form suitable for self-hosting; UN does not appear to publish crypto addresses at all. Broader sanctions coverage would require a commercial provider that has done this linking work itself.",
+        "Only self, funding-wallet, and in-sample counterparty matches are checked against this list - unlike the internal registry above, sanctioned-address exposure is not backed by the reverse transaction-history index, since scanning 1,000+ addresses' full history is not feasible the way it is for a small hand-curated list.",
+      ],
     },
     {
       name: "Adverse Media Provider",
@@ -166,11 +193,27 @@ function buildComplianceLimitations(
     .filter((source) => source.status === "planned")
     .map((source) => source.name);
 
+  // Distinct from "planned" (never integrated) - a source that IS
+  // integrated but whose data hasn't loaded successfully right now (e.g.
+  // the OFAC list's first refresh hasn't completed, or every refresh
+  // attempt has failed). Silently grouping this with "planned" or
+  // "connected" would either overstate coverage or hide a real, temporary
+  // gap - see sanctionsRegistry.ts's status tracking.
+  const unavailableSourceNames = sourcesChecked
+    .filter((source) => source.status === "unavailable")
+    .map((source) => source.name);
+
   const limitations: string[] = [
     matches.length > 0
       ? `${matches.length} compliance-related match${matches.length === 1 ? "" : "es"} ${matches.length === 1 ? "was" : "were"} identified against connected sources (${connectedSourceNames.join(", ")}) and should be reviewed.`
       : `No compliance-related matches were identified against connected sources (${connectedSourceNames.join(", ")}).`,
   ];
+
+  if (unavailableSourceNames.length > 0) {
+    limitations.push(
+      `${unavailableSourceNames.join(", ")} ${unavailableSourceNames.length === 1 ? "is" : "are"} normally connected but temporarily unavailable for this investigation - screening for ${unavailableSourceNames.length === 1 ? "that category was" : "those categories were"} not performed, not confirmed clean.`,
+    );
+  }
 
   if (plannedSourceNames.length > 0) {
     limitations.push(
