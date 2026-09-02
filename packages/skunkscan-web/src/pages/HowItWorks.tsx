@@ -44,7 +44,7 @@ const CHAIN_COVERAGE = [
 
 const HONEST_LIMITS = [
   "Sample size: relationship and funding analysis is based on a wallet's most recent transactions, not its entire history - a deliberate cost/coverage tradeoff, not a silent gap. A real counterparty or funding event further back than that window won't be reflected yet.",
-  "Compliance screening: we currently check known scam wallets, rug pulls, and suspicious wallets against our own internal registry, with sanctions screening (OFAC, EU, UK, UN) and adverse-media screening from external providers planned for a future release - not connected yet. We say this exactly, not in a way that implies broader coverage than we actually have.",
+  "Compliance screening: we check known scam wallets, rug pulls, and suspicious wallets against our own internal registry, plus sanctions screening against the US Treasury's OFAC list (self-hosted, refreshed roughly every 12 hours). EU, UK, and UN sanctions lists aren't connected yet - EU and UK do designate some crypto addresses, but not in a free, reliably structured form we could self-host the way OFAC's is; UN doesn't appear to publish crypto addresses at all. Adverse-media screening from an external provider remains planned for a future release. We say this exactly, not in a way that implies broader coverage than we actually have.",
   "Incomplete data is never silently treated as \"clean\": if a token-holdings fetch is truncated or times out, we say so explicitly rather than scoring a wallet as if it genuinely holds nothing else.",
 ];
 
