@@ -6,6 +6,7 @@ import {
   WalletRiskSummary,
   WalletWhaleSummary,
 } from "../types";
+import { describeConnectedSources, getSystemSourcesChecked } from "./sourceDisclosure";
 
 export function analyzeWalletCaseSummary(
   age: WalletAgeSummary,
@@ -64,7 +65,14 @@ export function analyzeWalletCaseSummary(
       /_/g,
       " ",
     )} with a ${risk.level} risk assessment. ` +
-    `Recommendation: ${recommendation.replace(/_/g, " ")}.`;
+    `Recommendation: ${recommendation.replace(/_/g, " ")}.` +
+    // Only the positive/clean recommendation needs the scope caveat in the
+    // same breath - a "review"/"investigate"/"high_risk" recommendation is
+    // already a call to look closer, not a claim that could be misread as
+    // a broader guarantee.
+    (recommendation === "allow"
+      ? ` This reflects only ${describeConnectedSources(getSystemSourcesChecked())}, not a guarantee.`
+      : "");
 
   return {
     headline,

@@ -9,6 +9,7 @@ import {
   WalletRiskSummary,
   WalletTrustSummary,
 } from "../types";
+import { describeConnectedSources, getSystemSourcesChecked } from "./sourceDisclosure";
 
 export function analyzeExecutiveVerdict(
   display: WalletDisplaySummary,
@@ -128,7 +129,7 @@ function buildHeadline(
       return "Manual review recommended";
 
     case "low_risk":
-      return "Low risk wallet";
+      return `Low risk wallet - checked against ${describeConnectedSources(getSystemSourcesChecked())}`;
 
     default:
       return "Wallet investigation completed";
@@ -140,7 +141,7 @@ function buildSuggestedAction(
 ): string {
   switch (recommendation) {
     case "allow":
-      return "Proceed normally based on the current investigation.";
+      return `Proceed normally based on the current investigation - this reflects only ${describeConnectedSources(getSystemSourcesChecked())}, not a guarantee.`;
 
     case "review":
       return "Perform manual review before proceeding.";
