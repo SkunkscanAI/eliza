@@ -982,6 +982,11 @@ export type WalletTrustCheckCard = {
   riskDisplay?: string;
   trustDisplay?: string;
   exposureDisplay?: string;
+  // Names which sources this result was actually checked against, on every
+  // tier (not just red) - so a green/yellow headline can't be misread as a
+  // broader guarantee than what was actually screened. Built from
+  // complianceScreening.sourcesChecked via sourceDisclosure.ts.
+  scopeDisclosure: string;
   warnings: string[];
 };
 
