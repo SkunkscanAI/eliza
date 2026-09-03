@@ -1,7 +1,20 @@
 import type http from "node:http";
+import type { IAgentRuntime } from "@elizaos/core";
 import { investigateWallet } from "../skunkscan/wallet";
 import { isSupportedChain, SUPPORTED_CHAINS, SupportedChain } from "../skunkscan/types";
 import { buildTrustCheckCard } from "../skunkscan/analyzers/trustCheckCard";
+import type { RuntimeDb } from "../skunkscan/candidates/sql";
+
+// Same cast used by services/approval/sql.ts and
+// services/knowledge-graph/sql.ts for the same purpose - `runtime.adapter.db`
+// isn't typed as this narrow `{ execute }` shape at the @elizaos/core level,
+// so every raw-SQL caller in this codebase narrows it the same way at the
+// point of use. Returns undefined (not a throw) when no runtime/adapter is
+// available - e.g. a standalone script - so pattern-alert detection can
+// still run without persistence rather than fail the whole investigation.
+function resolveRuntimeDb(runtime: IAgentRuntime | null | undefined): RuntimeDb | undefined {
+  return (runtime?.adapter as { db?: RuntimeDb } | undefined)?.db;
+}
 
 type JsonHelper = (
   res: http.ServerResponse,
@@ -61,8 +74,15 @@ export async function handleSkunkScanRoute(
     json: JsonHelper;
     error: ErrorHelper;
     readJsonBody: ReadJsonBodyHelper;
+    // Optional so callers without a booted runtime (e.g. a future
+    // standalone smoke test of this route module) still compile - pattern
+    // alert detection degrades to non-persisted when this is absent, same
+    // as investigateWallet()'s own `options.db` fallback.
+    runtime?: IAgentRuntime | null;
   },
 ): Promise<boolean> {
+  const db = resolveRuntimeDb(helpers.runtime);
+
   if (pathname === "/api/skunkscan/trust-check") {
     if (method !== "POST") {
       helpers.error(res, "Method not allowed", 405);
@@ -72,7 +92,7 @@ export async function handleSkunkScanRoute(
     const parsed = await readWalletRequest(req, res, helpers);
     if (!parsed) return true;
 
-    const result = await investigateWallet(parsed.chain, parsed.address);
+    const result = await investigateWallet(parsed.chain, parsed.address, { db });
     const card = buildTrustCheckCard(result);
 
     helpers.json(res, card, result.status === "supported" ? 200 : 400);
@@ -91,7 +111,7 @@ export async function handleSkunkScanRoute(
   const parsed = await readWalletRequest(req, res, helpers);
   if (!parsed) return true;
 
-  const result = await investigateWallet(parsed.chain, parsed.address);
+  const result = await investigateWallet(parsed.chain, parsed.address, { db });
 
   helpers.json(res, result, result.status === "supported" ? 200 : 400);
   return true;

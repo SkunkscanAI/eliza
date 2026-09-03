@@ -112,6 +112,7 @@ export function Report() {
     funding,
     evidenceRecords,
     recentTransactions,
+    patternAlerts,
     warnings,
   } = report;
 
@@ -172,6 +173,50 @@ export function Report() {
                 <SignalList items={executiveVerdict.why} />
               </div>
             </div>
+          )}
+        </ReportSection>
+
+        {/* Deliberately its own section, never merged into Risk & Trust or
+            Compliance Screening below - a pattern alert is an independent
+            behavioral observation about this wallet's own transaction
+            history (e.g. raise-and-drain), not a match against
+            staticRegistry.ts or the OFAC list. See types.ts's
+            WalletPatternAlert doc comment. */}
+        <ReportSection
+          id="pattern-alerts"
+          title="Pattern Alert"
+          subtitle="Behavioral scam-pattern detection - independent of the list-based Exposure and Compliance Screening sections below"
+        >
+          {patternAlerts && patternAlerts.length > 0 ? (
+            <div className="space-y-3">
+              {patternAlerts.map((alert: {
+                patternId: string;
+                detectedAt: string;
+                evidenceSummary: string;
+                reviewStatus: string;
+              }) => (
+                <div
+                  key={`${alert.patternId}-${alert.detectedAt}`}
+                  className="rounded-lg border border-dashed border-ink-600 bg-ink-900/60 p-4"
+                >
+                  <p className="text-sm font-semibold text-ink-50">
+                    Pattern Alert: {alert.patternId.replace(/_/g, "-")}
+                  </p>
+                  <p className="mt-1 text-sm text-ink-200">
+                    This wallet matched a known scam behavior pattern (
+                    {alert.patternId.replace(/_/g, "-")}) on{" "}
+                    {new Date(alert.detectedAt).toISOString().slice(0, 10)}. {alert.evidenceSummary}
+                  </p>
+                  <p className="mt-2 text-xs text-ink-400">
+                    This is a behavioral observation, not a confirmed scam designation.
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-ink-400">
+              No behavioral scam patterns have been detected for this wallet.
+            </p>
           )}
         </ReportSection>
 

@@ -49,6 +49,10 @@ export function buildTrustCheckCard(
     trustDisplay: verdict?.trustDisplay,
     exposureDisplay: verdict?.exposureDisplay,
     scopeDisclosure: buildScopeDisclosure(result.complianceScreening?.sourcesChecked),
+    // Surfaced on every tier, independent of tier/verdict - a behavioral
+    // pattern alert is not a list match and must never be silently folded
+    // into the risk/trust/exposure verdict this card otherwise carries.
+    patternAlerts: result.patternAlerts ?? [],
     warnings: result.warnings,
   };
 }

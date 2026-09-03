@@ -987,6 +987,13 @@ export type WalletTrustCheckCard = {
   // broader guarantee than what was actually screened. Built from
   // complianceScreening.sourcesChecked via sourceDisclosure.ts.
   scopeDisclosure: string;
+  // Surfaced on the free card, not gated behind the full report - the
+  // value of behavioral pattern detection is catching brand-new scams no
+  // list contains, so it needs to be visible at the point where it can
+  // actually stop someone from sending money. Never affects `tier` -
+  // deliberately independent of the list-based risk/trust/exposure
+  // verdict this card otherwise carries.
+  patternAlerts: WalletPatternAlert[];
   warnings: string[];
 };
 
@@ -1718,6 +1725,49 @@ export type WalletInvestigationResult = {
   skunkScore?: WalletSkunkScoreSummary;
   investigationReport?: WalletInvestigationReport;
   investigationNarrative?: WalletInvestigationNarrative;
+  // Independent behavioral scam-pattern detection (e.g. raise-and-drain) -
+  // deliberately separate from exposure/complianceScreening above, which
+  // are purely list-based (staticRegistry.ts / OFAC). A pattern alert is a
+  // behavioral observation about THIS wallet's own transaction shape, not
+  // a match against any pre-existing list of known-bad addresses, and must
+  // never be merged into hasKnownScamExposure or the scam/rug_pull
+  // categories - see analyzers/patternAlerts.ts.
+  patternAlerts?: WalletPatternAlert[];
   summary: string;
   warnings: string[];
+};
+
+// "raise_and_drain" is the only pattern implemented today (see
+// patterns/raiseAndDrain.ts) - a union of one, not a plain string, so
+// adding a second pattern later is a type-checked, enumerable change
+// everywhere this is consumed.
+export type WalletPatternAlertId = "raise_and_drain";
+
+// Mirrors candidates/types.ts's ReviewStatus (the review-queue state a
+// human moves a detection through) - duplicated here rather than imported
+// so this display-facing type has no dependency on the DB-backed
+// candidates/ module, which pattern-alert callers without a `db` never
+// touch at all.
+export type WalletPatternAlertReviewStatus = "pending" | "accepted" | "rejected";
+
+export type WalletPatternAlert = {
+  patternId: WalletPatternAlertId;
+
+  // ISO 8601 - when this detection was first recorded (persisted) or, if
+  // no persistence layer is available, when it was computed for this
+  // response.
+  detectedAt: string;
+
+  // A single, human-readable sentence built from the pattern's own real
+  // evidence fields (see analyzers/patternAlerts.ts's buildEvidenceSummary)
+  // - never a static, generic description.
+  evidenceSummary: string;
+
+  // "rejected" alerts are already filtered out before this type is ever
+  // populated (see analyzers/patternAlerts.ts) - a human has reviewed and
+  // confirmed the false positive, so it must not keep surfacing to future
+  // users of this wallet. "pending"/"accepted" both display identically;
+  // review status isn't a display gate, only a promotion/correction
+  // mechanism working in the background.
+  reviewStatus: WalletPatternAlertReviewStatus;
 };

@@ -18,6 +18,8 @@ import { WRAPPED_NATIVE_ASSET_ID } from "./providers/priceProvider";
 import { getTokenPriceProvider } from "./providers/pricing/registry";
 import { createWalletInvestigation } from "./investigations/walletIntegration";
 import { runWalletPipeline } from "./pipeline/walletPipeline";
+import { analyzeWalletPatternAlerts } from "./analyzers/patternAlerts";
+import type { RuntimeDb } from "./candidates/sql";
 import {
   parseSolanaTransaction,
   ParsedWalletTransaction,
@@ -185,9 +187,16 @@ const CHAINS_WITH_LATENCY_GUARD: ReadonlySet<SupportedChain> = new Set([
 export async function investigateWallet(
   chain: SupportedChain,
   address: string,
+  // Optional so every existing caller (standalone scripts, the
+  // wallet.real.test.ts regression suite, anything without a booted
+  // agent runtime) keeps working unchanged. Without it, pattern-alert
+  // detection still runs (pure computation over already-fetched
+  // relationships) but nothing gets persisted or deduplicated against
+  // history - see analyzers/patternAlerts.ts.
+  options?: { db?: RuntimeDb },
 ): Promise<WalletInvestigationResult> {
   if (!CHAINS_WITH_LATENCY_GUARD.has(chain)) {
-    return investigateWalletInternal(chain, address);
+    return investigateWalletInternal(chain, address, options);
   }
 
   // The timeout handle must be captured and cleared once the race settles,
@@ -216,7 +225,7 @@ export async function investigateWallet(
 
   try {
     return await Promise.race([
-      investigateWalletInternal(chain, address),
+      investigateWalletInternal(chain, address, options),
       timeoutPromise,
     ]);
   } finally {
@@ -227,6 +236,7 @@ export async function investigateWallet(
 async function investigateWalletInternal(
   chain: SupportedChain,
   address: string,
+  options?: { db?: RuntimeDb },
 ): Promise<WalletInvestigationResult> {
   const walletAddress = address.trim();
 
@@ -516,7 +526,7 @@ const {
   investigationReport,
   investigationNarrative,
 } = pipeline;
-        
+
   const investigation = createWalletInvestigation({
   chain,
   address: walletAddress,
@@ -534,7 +544,14 @@ const {
 });
 
 void investigation;
-        
+
+  const patternAlerts = await analyzeWalletPatternAlerts(
+    chain,
+    walletAddress,
+    relationships.relationships,
+    options?.db,
+  );
+
         return {
   chain,
   address: walletAddress,
@@ -581,6 +598,7 @@ caseSummary,
 decision,
 investigationReport,
 investigationNarrative,
+patternAlerts,
 summary: `Wallet found. Current balance: ${balance.sol.toFixed(
   6,
 )} SOL. Recent transaction sample: ${recentTransactions.length}.`,
@@ -848,6 +866,13 @@ warnings: investigationWarnings,
 
         void investigation;
 
+        const patternAlerts = await analyzeWalletPatternAlerts(
+          chain,
+          walletAddress,
+          relationships.relationships,
+          options?.db,
+        );
+
         return {
           chain,
           address: walletAddress,
@@ -896,6 +921,7 @@ warnings: investigationWarnings,
           decision,
           investigationReport,
           investigationNarrative,
+          patternAlerts,
           summary: `Wallet found. Current balance: ${ethBalance.toFixed(
             6,
           )} ETH. Recent transaction sample: ${nonSpamRecentTransactions.length}.`,
@@ -1158,6 +1184,13 @@ warnings: investigationWarnings,
 
         void investigation;
 
+        const patternAlerts = await analyzeWalletPatternAlerts(
+          chain,
+          walletAddress,
+          relationships.relationships,
+          options?.db,
+        );
+
         return {
           chain,
           address: walletAddress,
@@ -1206,6 +1239,7 @@ warnings: investigationWarnings,
           decision,
           investigationReport,
           investigationNarrative,
+          patternAlerts,
           summary: `Wallet found. Current balance: ${bnbBalance.toFixed(
             6,
           )} BNB. Recent transaction sample: ${nonSpamRecentTransactions.length}.`,
@@ -1472,6 +1506,13 @@ warnings: investigationWarnings,
 
         void investigation;
 
+        const patternAlerts = await analyzeWalletPatternAlerts(
+          chain,
+          walletAddress,
+          relationships.relationships,
+          options?.db,
+        );
+
         return {
           chain,
           address: walletAddress,
@@ -1520,6 +1561,7 @@ warnings: investigationWarnings,
           decision,
           investigationReport,
           investigationNarrative,
+          patternAlerts,
           summary: `Wallet found. Current balance: ${ethBalance.toFixed(
             6,
           )} ETH. Recent transaction sample: ${nonSpamRecentTransactions.length}.`,
@@ -1871,6 +1913,13 @@ warnings: investigationWarnings,
           );
         }
 
+        const patternAlerts = await analyzeWalletPatternAlerts(
+          chain,
+          walletAddress,
+          relationships.relationships,
+          options?.db,
+        );
+
         return {
           chain,
           address: walletAddress,
@@ -1917,6 +1966,7 @@ warnings: investigationWarnings,
           decision,
           investigationReport,
           investigationNarrative,
+          patternAlerts,
           summary: `Wallet found. Current balance: ${btcBalance.toFixed(
             8,
           )} BTC. Recent transaction sample: ${recentTransactions.length}.`,

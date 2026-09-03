@@ -34,6 +34,17 @@ const CHAIN_LABEL: Record<SupportedChain, string> = {
 
 type TrustCheckTier = "green" | "yellow" | "red";
 
+// Mirrors WalletPatternAlert in packages/agent/src/skunkscan/types.ts -
+// deliberately its own type, not merged into TrustCheckCard's
+// risk/trust/exposure fields, since a pattern alert is an independent
+// behavioral observation, never a list match.
+type TrustCheckPatternAlert = {
+  patternId: "raise_and_drain";
+  detectedAt: string;
+  evidenceSummary: string;
+  reviewStatus: "pending" | "accepted" | "rejected";
+};
+
 type TrustCheckCard = {
   chain: SupportedChain;
   address: string;
@@ -45,8 +56,20 @@ type TrustCheckCard = {
   trustDisplay?: string;
   exposureDisplay?: string;
   scopeDisclosure: string;
+  patternAlerts: TrustCheckPatternAlert[];
   warnings: string[];
 };
+
+const PATTERN_ALERT_LABEL: Record<TrustCheckPatternAlert["patternId"], string> = {
+  raise_and_drain: "raise-and-drain",
+};
+
+function formatPatternAlertDate(detectedAt: string): string {
+  const parsed = new Date(detectedAt);
+  return Number.isNaN(parsed.getTime())
+    ? detectedAt
+    : parsed.toISOString().slice(0, 10);
+}
 
 const TIER_STYLE: Record<TrustCheckTier, { label: string; border: string; bg: string; text: string }> = {
   green: {
@@ -183,6 +206,37 @@ export function TrustCheckWidget({ compact = false }: { compact?: boolean }) {
               headline above, not buried in a separate limitations section. */}
           {card.scopeDisclosure && (
             <p className="mt-1 text-xs text-ink-400">{card.scopeDisclosure}</p>
+          )}
+
+          {/* Deliberately NOT styled with the green/yellow/red tier colors
+              above - a pattern alert is an independent behavioral
+              observation about this wallet's own transaction history, not
+              a list match, and must never read as a 4th tier or be
+              confused with the risk/trust/exposure verdict. Shown on the
+              free card (not gated behind the full report) since the whole
+              point is catching brand-new scams no list contains, at the
+              moment it can actually stop a payment. */}
+          {card.patternAlerts.length > 0 && (
+            <div className="mt-4 space-y-2">
+              {card.patternAlerts.map((alert) => (
+                <div
+                  key={`${alert.patternId}-${alert.detectedAt}`}
+                  className="rounded-lg border border-dashed border-ink-600 bg-ink-900/60 p-3"
+                >
+                  <p className="text-sm font-semibold text-ink-50">
+                    Pattern Alert: {PATTERN_ALERT_LABEL[alert.patternId]}
+                  </p>
+                  <p className="mt-1 text-sm text-ink-200">
+                    This wallet matched a known scam behavior pattern (
+                    {PATTERN_ALERT_LABEL[alert.patternId]}) on{" "}
+                    {formatPatternAlertDate(alert.detectedAt)}. {alert.evidenceSummary}
+                  </p>
+                  <p className="mt-1 text-xs text-ink-400">
+                    This is a behavioral observation, not a confirmed scam designation.
+                  </p>
+                </div>
+              ))}
+            </div>
           )}
 
           {/* Evidence-gated: this only renders at all when there's real
