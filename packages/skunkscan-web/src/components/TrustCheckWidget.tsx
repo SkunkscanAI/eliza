@@ -232,7 +232,10 @@ export function TrustCheckWidget({ compact = false }: { compact?: boolean }) {
                     {formatPatternAlertDate(alert.detectedAt)}. {alert.evidenceSummary}
                   </p>
                   <p className="mt-1 text-xs text-ink-400">
-                    This is a behavioral observation, not a confirmed scam designation.
+                    This is a behavioral observation, not a confirmed scam designation - and it only
+                    covers the raise-and-drain pattern (a wallet-to-wallet SOL/ETH transfer shape) in
+                    the recently analyzed transaction history, not token dumps or liquidity-pool
+                    rug pulls.
                   </p>
                 </div>
               ))}
