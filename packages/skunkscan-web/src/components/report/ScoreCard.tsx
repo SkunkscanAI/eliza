@@ -10,6 +10,7 @@ export function ScoreCard({
   title,
   level,
   displayScore,
+  summary,
   positive = [],
   negative = [],
   limitations = [],
@@ -17,6 +18,14 @@ export function ScoreCard({
   title: string;
   level: string;
   displayScore: string;
+  // Optional one-sentence, per-wallet explanation (e.g. an analyzer's
+  // investorExplanation.summary) - only worth passing when it states real
+  // information not already visible elsewhere on this card (a number, a
+  // specific finding), not when it would just restate the score/level
+  // already shown above. Rendered with visual priority over the bullet
+  // list below, since it's meant to resolve "why this score" at a glance
+  // rather than require reading through undifferentiated reasons.
+  summary?: string;
   positive?: string[];
   negative?: string[];
   limitations?: string[];
@@ -28,6 +37,7 @@ export function ScoreCard({
         <span className="text-xs uppercase tracking-wide text-ink-400">{level.replace(/_/g, " ")}</span>
       </div>
       <p className="mt-1 text-2xl font-bold text-ink-50">{displayScore}</p>
+      {summary && <p className="mt-2 text-sm text-ink-200">{summary}</p>}
 
       {positive.length > 0 && (
         <div className="mt-3">
