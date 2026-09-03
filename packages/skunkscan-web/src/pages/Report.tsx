@@ -112,6 +112,7 @@ export function Report() {
     funding,
     evidenceRecords,
     recentTransactions,
+    transactionCountSample,
     patternAlerts,
     warnings,
   } = report;
@@ -185,7 +186,7 @@ export function Report() {
         <ReportSection
           id="pattern-alerts"
           title="Pattern Alert"
-          subtitle="Behavioral scam-pattern detection - independent of the list-based Exposure and Compliance Screening sections below"
+          subtitle="Wallet-to-wallet native-asset (SOL/ETH) raise-and-drain detection only, within the recently analyzed transaction sample - does not cover token dumps or liquidity-pool rug pulls"
         >
           {patternAlerts && patternAlerts.length > 0 ? (
             <div className="space-y-3">
@@ -208,14 +209,19 @@ export function Report() {
                     {new Date(alert.detectedAt).toISOString().slice(0, 10)}. {alert.evidenceSummary}
                   </p>
                   <p className="mt-2 text-xs text-ink-400">
-                    This is a behavioral observation, not a confirmed scam designation.
+                    This is a behavioral observation, not a confirmed scam designation - and it only
+                    covers the raise-and-drain pattern, not token dumps, liquidity-pool removals, or
+                    activity outside the recently analyzed transaction sample.
                   </p>
                 </div>
               ))}
             </div>
           ) : (
             <p className="text-sm text-ink-400">
-              No behavioral scam patterns have been detected for this wallet.
+              No wallet-to-wallet SOL/ETH raise-and-drain pattern was found in the
+              {typeof transactionCountSample === "number" ? ` ${transactionCountSample} most recently analyzed` : " recently analyzed"}
+              {" "}transactions for this wallet. This does not cover token dumps, liquidity-pool
+              removals, or activity outside that sample.
             </p>
           )}
         </ReportSection>
