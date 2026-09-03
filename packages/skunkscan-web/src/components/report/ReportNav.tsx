@@ -1,5 +1,6 @@
 const SECTIONS = [
   { id: "overview", label: "Overview" },
+  { id: "pattern-alerts", label: "Pattern Alert" },
   { id: "portfolio", label: "Portfolio" },
   { id: "defi", label: "DeFi Activity" },
   { id: "risk-signals", label: "Risk & Trust" },
