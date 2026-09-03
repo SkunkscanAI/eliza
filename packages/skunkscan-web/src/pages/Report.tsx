@@ -273,6 +273,15 @@ export function Report() {
               title="Whale"
               level={whale?.whaleLevel ?? "unknown"}
               displayScore={`${whale?.whaleScore ?? 0}/100`}
+              // Whale is a blended score (USD value is only one of six
+              // signals - age/activity/diversity/funding/risk make up the
+              // rest), so a low-USD wallet can still land on a non-zero
+              // score. investorExplanation.summary is the one place the
+              // real USD figure actually gets stated - not shown anywhere
+              // else on this card - so it's surfaced here to resolve that
+              // apparent contradiction at a glance instead of requiring a
+              // read through the undifferentiated reasons list below.
+              summary={whale?.investorExplanation?.summary}
               positive={whale?.reasons}
               limitations={whale?.limitations}
             />
