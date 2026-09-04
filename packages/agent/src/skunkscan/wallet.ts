@@ -2095,6 +2095,7 @@ warnings: investigationWarnings,
           firstParsedTransaction,
           normalizedRecentParsedTransactions,
           tokenPrices,
+          xrpOwnerCount: accountInfo.OwnerCount,
         });
 
         const {
@@ -2145,7 +2146,11 @@ warnings: investigationWarnings,
         );
 
         const investigationWarnings: string[] = [
-          "The reported balance includes the account's XRP Ledger reserve requirement (a non-spendable minimum, currently 10 XRP plus a small amount per trust line) - it is not yet distinguished from the spendable balance. Planned as a later stage of this chain's rollout.",
+          // The real reserve breakdown (how much of the balance is
+          // reserved vs. spendable) is now computed and disclosed directly
+          // in portfolio.notes/reserveRequirementNative/
+          // spendableNativeAmount for this specific wallet - not repeated
+          // here as a generic warning.
           "Trust-line/issued-currency (non-XRP token) holdings are not yet retrieved - portfolio/tokenCount reflect the native XRP balance only, not an indication the wallet holds nothing else. Planned as a later stage of this chain's rollout.",
           "XRP Ledger NFT (XLS-20) holdings are not yet retrieved - nftHoldings is always empty for now, not an indication the wallet holds none. Not yet implemented, not structurally impossible the way it is for Bitcoin.",
           `Funding, relationship, and exposure analysis is based on the ${recentTransactions.length} most recently analyzed transactions (plus this account's real, on-ledger activation record for its very first funding event) - a real counterparty or funding event further back than that window would not be reflected yet.`,

@@ -438,6 +438,18 @@ export type WalletPortfolioSummary = {
   // diversityLevel as a scoring signal (alpha.ts, conviction.ts,
   // profitability.ts) must check this before treating either as evidence.
   diversityApplicable: boolean;
+  // Non-null only for chains with a real, network-enforced minimum-balance
+  // reserve (currently XRP Ledger - see portfolio.ts). nativeBalance above
+  // still reports the wallet's TRUE total native balance (its real net
+  // worth), not just the spendable portion - these two fields disclose the
+  // breakdown without changing what nativeBalance/estimatedTotalUsdValue
+  // mean, so no downstream scoring (whale.ts, etc.) needs to change either.
+  // null for every chain without a reserve concept, not 0 - 0 would
+  // incorrectly claim "this chain has a reserve requirement and it happens
+  // to be zero," which is a different, false statement from "not
+  // applicable here."
+  reserveRequirementNative: number | null;
+  spendableNativeAmount: number | null;
   notes: string[];
 };
 

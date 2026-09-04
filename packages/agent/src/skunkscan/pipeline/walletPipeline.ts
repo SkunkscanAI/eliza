@@ -73,6 +73,7 @@ export async function runWalletPipeline(
     input.tokenPrices,
     input.chain,
     input.tokenHoldingsIncomplete ?? false,
+    input.xrpOwnerCount,
   );
 
   const risk = analyzeWalletRisk(
