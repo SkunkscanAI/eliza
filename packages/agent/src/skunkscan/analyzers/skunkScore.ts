@@ -27,7 +27,7 @@ export function analyzeSkunkScore(
     { label: "Trust", score: input.trust.trustScore, weight: 0.20 },
     { label: "Risk (inverted)", score: 100 - input.risk.score, weight: 0.20 },
     { label: "Smart Money", score: input.smartMoney.smartMoneyScore, weight: 0.10 },
-    { label: "Profitability", score: input.profitability.profitabilityScore, weight: 0.10 },
+    { label: "Investor Skill Signal", score: input.profitability.investorSkillScore, weight: 0.10 },
     { label: "Exposure (inverted)", score: 100 - input.exposure.exposureScore, weight: 0.05 },
   ];
 

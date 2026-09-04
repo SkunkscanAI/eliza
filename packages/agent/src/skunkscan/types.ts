@@ -1450,12 +1450,21 @@ export type WalletInvestmentStyleSummary = {
   investorInsights?: InvestorEvidenceCollection;
 };
 
+// Field names deliberately avoid "profitability" language beyond the type
+// name itself - this measures behavioral resemblance to patterns commonly
+// seen in profitable investors (a blend of alpha/smartMoney/trust/
+// conviction plus strategy/diversity bonuses), not real trading profit or
+// loss. No historical, point-in-time price data exists anywhere in this
+// pipeline on any chain (spot-price-only today), so an actual P&L
+// calculation cannot be computed - not a transaction-sample-size gap that
+// more history would close, a structural one. See investorSummary/
+// investorTakeaway in profitability.ts for the full disclosure.
 export type WalletProfitabilitySummary = {
-  profitabilityScore: number;
+  investorSkillScore: number;
 
   displayScore: string;
 
-  profitabilityLevel:
+  investorSkillLevel:
     | "unknown"
     | "weak"
     | "limited"
@@ -1463,7 +1472,7 @@ export type WalletProfitabilitySummary = {
     | "strong"
     | "very_strong";
 
-  estimatedProfitability:
+  resemblesProfitablePattern:
     | "unknown"
     | "unlikely"
     | "possible"

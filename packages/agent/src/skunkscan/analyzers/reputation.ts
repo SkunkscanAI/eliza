@@ -26,7 +26,7 @@ export function analyzeWalletReputation(
       input.trust.trustScore * 0.35 +
       input.alpha.alphaScore * 0.25 +
       input.smartMoney.smartMoneyScore * 0.20 +
-      input.profitability.profitabilityScore * 0.20
+      input.profitability.investorSkillScore * 0.20
     );
 
   score -= input.risk.score;
@@ -51,16 +51,16 @@ export function analyzeWalletReputation(
   // but previously had no strength condition at all - a wallet with a
   // strong alpha reading contributed real, positive weight to the score
   // with zero visible explanation. Threshold matches smartMoney/
-  // profitability's existing 60 for consistency, rather than introducing
-  // a third distinct value.
+  // the Investor Skill Signal's existing 60 for consistency, rather than
+  // introducing a third distinct value.
   if (input.alpha.alphaScore >= 60)
     strengths.push("Strong Alpha Score indicators.");
 
   if (input.smartMoney.smartMoneyScore >= 60)
     strengths.push("Shows smart-money characteristics.");
 
-  if (input.profitability.profitabilityScore >= 60)
-    strengths.push("Positive profitability indicators.");
+  if (input.profitability.investorSkillScore >= 60)
+    strengths.push("Positive investor-skill-pattern indicators.");
 
   if (input.risk.level !== "low")
     concerns.push("Risk indicators reduce reputation.");
@@ -91,7 +91,7 @@ export function analyzeWalletReputation(
     {
       condition: input.profitability.evidenceConfidence === "high",
       score: 20,
-      reason: "Profitability evidence confidence is high.",
+      reason: "Investor Skill Signal evidence confidence is high.",
     },
   ]);
 
@@ -111,7 +111,7 @@ export function analyzeWalletReputation(
     investorHeadline: `Wallet Reputation: ${reputationLevel}`,
 
     investorSummary:
-      "The Reputation Score summarizes the wallet's overall credibility using trust, risk, alpha, profitability and smart-money indicators.",
+      "The Reputation Score summarizes the wallet's overall credibility using trust, risk, alpha, the Investor Skill Signal, and smart-money indicators.",
 
     investorTakeaway:
       "Higher reputation scores suggest stronger overall blockchain characteristics, but they do not guarantee future performance or safety.",
