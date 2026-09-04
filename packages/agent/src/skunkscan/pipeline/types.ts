@@ -75,6 +75,11 @@ export interface WalletPipelineInput {
   // Threaded into WalletPortfolioSummary.dataCompleteness. Defaults to
   // false (every other chain/case) when omitted.
   tokenHoldingsIncomplete?: boolean;
+  // XRP-specific: the account's real OwnerCount (trust lines, offers,
+  // etc.), needed by analyzers/portfolio.ts to compute the real reserve
+  // requirement. undefined for every other chain - see portfolio.ts's own
+  // doc comment for why this is the gate, not chain === "xrp" alone.
+  xrpOwnerCount?: number;
 }
 
 export type WalletActivityPipelineResult =
