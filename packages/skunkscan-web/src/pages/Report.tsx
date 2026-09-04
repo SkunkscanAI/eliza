@@ -16,7 +16,11 @@ import { ArrowRight } from "../components/ui/icons";
 // identical constant and comment for why this needs to be absolute.
 const API_BASE_URL = import.meta.env.VITE_SKUNKSCAN_API_BASE_URL ?? "";
 
-const SUPPORTED_CHAINS = ["solana", "ethereum", "base", "bnb", "bitcoin", "xrp"] as const;
+// Same ordering (by real-world popularity/market-cap, not alphabetical) as
+// TrustCheckWidget.tsx's identical constant, kept consistent across the site
+// even though this copy only gates route validity and isn't rendered as a
+// visible list.
+const SUPPORTED_CHAINS = ["bitcoin", "ethereum", "bnb", "xrp", "solana", "base"] as const;
 
 // Deliberately typed loosely (Record<string, any>-ish via `any` fields) at
 // the boundary rather than re-declaring the full WalletInvestigationResult

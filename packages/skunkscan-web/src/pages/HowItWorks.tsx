@@ -16,21 +16,11 @@ const PIPELINE_STEPS = [
   },
 ];
 
+// Ordered by real-world popularity/market-cap ranking (Bitcoin, Ethereum,
+// BNB, XRP, Solana, Base) - the Ethereum/BNB/Base entry stays merged since
+// their coverage is genuinely identical (same connector), positioned at
+// Ethereum's rank rather than split into three duplicate cards.
 const CHAIN_COVERAGE = [
-  {
-    chain: "Ethereum, Base, BNB Chain",
-    notes: [
-      "Full token holdings, transaction history, and known-infrastructure detection (exchanges, DEX routers, bridges).",
-      "Known spam/airdrop NFT patterns are filtered out of the activity sample.",
-    ],
-  },
-  {
-    chain: "Solana",
-    notes: [
-      "Full token holdings and transaction history.",
-      "No spam-NFT filter yet - this isn't an oversight. Two candidate filters were tested against real spam and real legitimate wallets, and both produced false positives on genuine NFTs, so nothing was shipped rather than risk hiding real activity. Your activity sample may include spam/airdrop transactions as a result.",
-    ],
-  },
   {
     chain: "Bitcoin",
     notes: [
@@ -41,12 +31,26 @@ const CHAIN_COVERAGE = [
     ],
   },
   {
+    chain: "Ethereum, BNB Chain, Base",
+    notes: [
+      "Full token holdings, transaction history, and known-infrastructure detection (exchanges, DEX routers, bridges).",
+      "Known spam/airdrop NFT patterns are filtered out of the activity sample.",
+    ],
+  },
+  {
     chain: "XRP Ledger",
     notes: [
       "Full balance, trust-line (issued-currency) holdings, and transaction history.",
       "Balance interpretation accounts for the XRP Ledger's own reserve requirement (a portion of your balance that's non-spendable by protocol rule) - what's shown as spendable already has that reserve subtracted, not left for you to work out.",
       "Known-infrastructure detection is deliberately narrow here: it covers a single independently-verified exchange's hot and cold wallets only (currently Bitfinex). Most exchanges route deposits through one shared address disambiguated by a destination tag, which we don't yet check - a deposit to a known exchange address under a different tag than expected won't be flagged as such.",
       "Trust-line balances are only counted as holdings when they're genuinely positive; a trust line can also read zero or negative depending on which side of it your account is on, and neither of those is an asset you actually hold.",
+    ],
+  },
+  {
+    chain: "Solana",
+    notes: [
+      "Full token holdings and transaction history.",
+      "No spam-NFT filter yet - this isn't an oversight. Two candidate filters were tested against real spam and real legitimate wallets, and both produced false positives on genuine NFTs, so nothing was shipped rather than risk hiding real activity. Your activity sample may include spam/airdrop transactions as a result.",
     ],
   },
 ];

@@ -12,7 +12,7 @@ const TRUST_POINTS = [
 const STEPS = [
   {
     title: "Paste the address",
-    body: "Any wallet on Solana, Ethereum, Base, BNB Chain, Bitcoin, or the XRP Ledger.",
+    body: "Any wallet on Bitcoin, Ethereum, BNB Chain, XRP Ledger, Solana, or Base.",
   },
   {
     title: "We check it in seconds",
@@ -43,7 +43,7 @@ export function Home() {
         </div>
 
         <p className="mx-auto mt-4 max-w-2xl text-center text-sm text-ink-400">
-          Works with Ethereum, Solana, BNB Chain, Base, Bitcoin, and XRP Ledger wallets.
+          Works with Bitcoin, Ethereum, BNB Chain, XRP Ledger, Solana, and Base wallets.
         </p>
       </section>
 
