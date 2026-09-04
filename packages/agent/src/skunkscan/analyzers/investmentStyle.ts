@@ -36,7 +36,7 @@ export function analyzeInvestmentStyle(
     | "defi_investor"
     | "yield_farmer"
     | "meme_coin_trader"
-    | "whale_investor"
+    | "portfolio_scale_investor"
     | "passive_holder"
     | "diversified_investor"
     | "mixed" = "mixed";
@@ -46,14 +46,21 @@ export function analyzeInvestmentStyle(
   // condition that matched (not just the final winner), so when more than
   // one is true simultaneously, the ones that got silently overwritten
   // become real conflictingSignals instead of disappearing - a wallet that
-  // is simultaneously whale-sized AND highly diversified genuinely has
+  // is simultaneously portfolio-scale AND highly diversified genuinely has
   // conflicting classification evidence, not a clean single answer.
   const matchedStyleLabels: { style: string; label: string }[] = [];
 
-  if (input.whale.isWhale) {
-    style = "whale_investor";
-    supportingSignals.push("Whale characteristics detected.");
-    matchedStyleLabels.push({ style: "whale_investor", label: "Whale characteristics" });
+  // Gated on whaleLevel medium/large, not the broader isWhale flag - see
+  // smartMoney.ts's identical comment for why isWhale alone (true even at
+  // whaleLevel "small") previously let a genuinely small portfolio
+  // (real-world case: ~$38) pick up this classification.
+  if (
+    input.whale.whaleLevel === "medium" ||
+    input.whale.whaleLevel === "large"
+  ) {
+    style = "portfolio_scale_investor";
+    supportingSignals.push("Portfolio-scale characteristics detected.");
+    matchedStyleLabels.push({ style: "portfolio_scale_investor", label: "Portfolio-scale characteristics" });
   }
 
   if (input.strategy.primaryStrategy === "holding") {
@@ -110,7 +117,7 @@ export function analyzeInvestmentStyle(
 
   if (style === "mixed") {
     limitations.push(
-      "No single investment style pattern was distinctly identified from the available evidence - none of the whale, strategy, DeFi, or diversification conditions matched.",
+      "No single investment style pattern was distinctly identified from the available evidence - none of the portfolio-scale, strategy, DeFi, or diversification conditions matched.",
     );
   }
 
