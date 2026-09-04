@@ -7,6 +7,7 @@ import {
 
 import { solanaTokenPriceProvider } from "./solana";
 import { bitcoinTokenPriceProvider } from "./bitcoin";
+import { rippleTokenPriceProvider } from "./ripple";
 import {
   baseTokenPriceProvider,
   bnbTokenPriceProvider,
@@ -68,6 +69,10 @@ tokenPriceProviderRegistry.register(
 
 tokenPriceProviderRegistry.register(
   baseTokenPriceProvider,
+);
+
+tokenPriceProviderRegistry.register(
+  rippleTokenPriceProvider,
 );
 
 export function getTokenPriceProvider(

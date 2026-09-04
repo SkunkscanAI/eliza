@@ -14,6 +14,12 @@ export const WRAPPED_SOL_MINT =
 // exactly).
 export const BITCOIN_NATIVE_ASSET_PRICE_ID = "bitcoin:native:BTC";
 
+// Same situation as Bitcoin - XRP has no wrapped-native token, priced
+// under its own synthetic ID instead. Must match chains/xrp.ts's own
+// native-asset assetId exactly once that connector exists (PR 2 of the
+// staged XRP build) - not wired to a connector yet as of this provider.
+export const XRP_NATIVE_ASSET_PRICE_ID = "xrp:native:XRP";
+
 // Canonical wrapped-native contract addresses, live-verified against
 // Moralis's price endpoint (real, current prices returned for all three -
 // not assumed from memory). Each is the standard, widely-used wrapped
@@ -30,4 +36,5 @@ export const WRAPPED_NATIVE_ASSET_ID: Partial<Record<SupportedChain, string>> =
     ethereum: WETH_ETHEREUM_ADDRESS,
     bnb: WBNB_ADDRESS,
     base: WETH_BASE_ADDRESS,
+    xrp: XRP_NATIVE_ASSET_PRICE_ID,
   };
