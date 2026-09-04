@@ -26,6 +26,11 @@ import {
 } from "./parsers/transaction";
 import { parseEthereumTransaction } from "./parsers/ethereumTransaction";
 import { parseBitcoinTransaction } from "./parsers/bitcoinTransaction";
+import { getXrplAccountInfo, getXrplAccountTransactions } from "./xrpscan";
+import { analyzeWalletActivity } from "./analyzers/activity";
+import { analyzeWalletAge } from "./analyzers/walletAge";
+import { analyzeWalletDormancy } from "./analyzers/walletDormancy";
+import { analyzeWalletPortfolio } from "./analyzers/portfolio";
 import {
   SupportedChain,
   UniversalNftHolding,
@@ -1971,6 +1976,120 @@ warnings: investigationWarnings,
             8,
           )} BTC. Recent transaction sample: ${recentTransactions.length}.`,
           warnings: investigationWarnings,
+        };
+      } catch (error) {
+        return {
+          chain,
+          address: walletAddress,
+          status: "error",
+          summary: "Unable to investigate this wallet.",
+          warnings: [
+            error instanceof Error
+              ? error.message
+              : "Unknown investigation error.",
+          ],
+        };
+      }
+    }
+
+    // PR 2 of the staged XRP Ledger build - deliberately partial. Wired
+    // only through activity/age/dormancy/portfolio, same as the approved
+    // plan: funding/relationships/exposure and the rest of
+    // runWalletPipeline()'s ~35 fields are PR 3, not this one. There is no
+    // pipeline call at all yet - the fields below are computed directly,
+    // the same individual analyzer functions runWalletPipeline() calls
+    // internally for every other chain, just not yet assembled through it
+    // here.
+    case "xrp": {
+      try {
+        // One call answers both balance AND age (inception) - see
+        // chains/xrp.ts's header comment for why this bypasses the
+        // connector's own getNativeBalance()/getOldestTransaction()
+        // methods (which exist and work, just aren't the path taken here)
+        // rather than making two requests to the same underlying endpoint.
+        const accountInfo = await getXrplAccountInfo(walletAddress);
+
+        const xrpBalance = Number(accountInfo.xrpBalance);
+
+        if (!Number.isFinite(xrpBalance)) {
+          throw new Error(
+            "XRPScan did not return a valid balance for this address.",
+          );
+        }
+
+        const walletBalance: WalletBalance = {
+          nativeAmount: xrpBalance,
+          nativeSymbol: "XRP",
+          rawAmount: Math.round(xrpBalance * 1_000_000),
+        };
+
+        const parsedInceptionAt = accountInfo.inception
+          ? Math.floor(Date.parse(accountInfo.inception) / 1000)
+          : NaN;
+
+        const inceptionAt = Number.isFinite(parsedInceptionAt)
+          ? parsedInceptionAt
+          : null;
+
+        const age = analyzeWalletAge(null, inceptionAt);
+
+        const { transactions: rawTransactions } =
+          await getXrplAccountTransactions(walletAddress);
+
+        const recentTransactions: WalletRecentTransaction[] =
+          rawTransactions.map((transaction) => ({
+            transactionId: transaction.hash,
+            blockTime: transaction.date
+              ? Math.floor(Date.parse(transaction.date) / 1000)
+              : null,
+            status:
+              transaction.meta?.TransactionResult === "tesSUCCESS"
+                ? "success"
+                : "failed",
+          }));
+
+        const activity = analyzeWalletActivity(recentTransactions);
+        const dormancy = analyzeWalletDormancy(activity.lastActiveAt);
+
+        // Trust-line/issued-currency holdings are not retrieved yet (PR 5
+        // of the staged build) - empty, not incomplete, matching Bitcoin's
+        // own "structurally no tokens yet" treatment of the same field.
+        const tokenHoldings: WalletTokenHolding[] = [];
+
+        const nativeAssetId = WRAPPED_NATIVE_ASSET_ID[chain];
+        const priceProvider = getTokenPriceProvider(chain);
+        const tokenPrices = priceProvider
+          ? await priceProvider.getTokenPrices(
+              nativeAssetId ? [nativeAssetId] : [],
+            )
+          : {};
+
+        const portfolio = analyzeWalletPortfolio(
+          walletBalance,
+          tokenHoldings,
+          tokenPrices,
+          chain,
+          false,
+        );
+
+        return {
+          chain,
+          address: walletAddress,
+          status: "supported",
+          balance: walletBalance,
+          tokenHoldings,
+          portfolio,
+          activity,
+          age,
+          dormancy,
+          recentTransactions,
+          transactionCountSample: recentTransactions.length,
+          summary: `Wallet found. Current balance: ${xrpBalance.toFixed(6)} XRP. Recent transaction sample: ${recentTransactions.length}.`,
+          warnings: [
+            "This is a partial XRP Ledger investigation (an early stage of this chain's rollout) - funding, relationships, exposure, compliance screening, and every risk/trust/whale/pattern-alert signal are not yet computed for this chain. Only balance, wallet age, dormancy, activity, and portfolio are available so far.",
+            "The reported balance includes the account's XRP Ledger reserve requirement (a non-spendable minimum, currently 10 XRP plus a small amount per trust line) - it is not yet distinguished from the spendable balance.",
+            "Trust-line/issued-currency (non-XRP token) holdings are not yet retrieved - portfolio/tokenCount above reflect the native XRP balance only.",
+          ],
         };
       } catch (error) {
         return {

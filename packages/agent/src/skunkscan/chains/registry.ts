@@ -10,6 +10,7 @@ import { ethereumBlockchainConnector } from "./ethereum";
 import { bnbBlockchainConnector } from "./bnb";
 import { baseBlockchainConnector } from "./base";
 import { bitcoinBlockchainConnector } from "./bitcoin";
+import { xrpBlockchainConnector } from "./xrp";
 
 export class DefaultBlockchainConnectorRegistry
   implements BlockchainConnectorRegistry
@@ -83,6 +84,14 @@ blockchainConnectorRegistry.register(
 // this file was committed, not after.)
 blockchainConnectorRegistry.register(
   bitcoinBlockchainConnector,
+);
+
+// Same critical step as above, a fourth time now - do not skip it for XRP
+// either. Checked explicitly before considering PR 2 of the XRP build
+// done, precisely because this exact mistake has already happened twice
+// (Ethereum, then Bitcoin) - see the two comments above.
+blockchainConnectorRegistry.register(
+  xrpBlockchainConnector,
 );
 
 export function getBlockchainConnector(
