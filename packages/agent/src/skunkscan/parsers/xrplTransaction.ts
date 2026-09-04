@@ -1,5 +1,10 @@
-import { XrpscanAccountInfo, XrpscanTransaction } from "../xrpscan";
+import {
+  XrpscanAccountInfo,
+  XrpscanTransaction,
+  XrpscanTrustLine,
+} from "../xrpscan";
 import { ParsedWalletTransaction } from "./transaction";
+import { WalletTokenHolding } from "../types";
 
 // Built now (PR 2 of the staged XRP build) but not yet wired into
 // funding.ts/relationships.ts - those are PR 3. Mirrors
@@ -131,4 +136,42 @@ export function buildXrplActivationTransaction(
     tokenTransfers: [],
     programOrContractIds: [],
   };
+}
+
+// Only lines with a POSITIVE balance are real holdings - see
+// xrpscan.ts's XrpscanTrustLine doc comment for why a trust line's
+// balance sign depends on address ordering, not on who "really" holds the
+// asset: a negative balance means this account is the effective issuer
+// side of that line (counterparties hold IOUs from it), and a zero
+// balance means the trust line exists but nothing has ever been
+// transferred over it. Neither is a holding this wallet actually
+// possesses - including them would misrepresent an issuer/unused
+// relationship as an asset, live-confirmed as a real, common shape (most
+// lines on a real tested account were exactly zero or negative).
+// decimals is 0 for every entry: XRPL issued-currency balances have no
+// on-chain "decimals" field the way ERC-20/SPL do - XRPScan's `balance`
+// is already the fully-resolved human-readable decimal value, not a raw
+// integer requiring decimal-shifting, so rawAmount mirrors the same
+// string rather than a separately-scaled figure.
+export function buildXrplTokenHoldings(
+  trustLines: XrpscanTrustLine[],
+): WalletTokenHolding[] {
+  const holdings: WalletTokenHolding[] = [];
+
+  for (const line of trustLines) {
+    const balance = Number(line.balance);
+
+    if (!Number.isFinite(balance) || balance <= 0) {
+      continue;
+    }
+
+    holdings.push({
+      tokenId: buildXrplTokenId(line.currency, line.account),
+      amount: balance,
+      decimals: 0,
+      rawAmount: line.balance,
+    });
+  }
+
+  return holdings;
 }

@@ -25,8 +25,10 @@ import {
 import {
   getXrplAccountInfo,
   getXrplAccountTransactions,
+  getXrplTrustLines,
   XrpscanTransaction,
 } from "../xrpscan";
+import { buildXrplTokenId } from "../parsers/xrplTransaction";
 
 import {
   AddressValidationResult,
@@ -73,16 +75,16 @@ const XRP_NATIVE_ASSET: UniversalAssetIdentifier = {
 // transaction data, not through this connector's getTransactions(), for
 // the reason explained in this file's header comment - so from this
 // connector's own point of view, transactions are still "listed only."
-// tokenRetrieval false: trust-line/issued-currency support is PR 5 of the
-// staged build, not this one - getTokenBalances always returns [] for now,
-// same interim state Bitcoin's connector has for its own (structural, not
-// staged) token-standard gap.
+// tokenRetrieval true as of PR 5 - trust-line/issued-currency balances are
+// real now (see getTokenBalances below), though wallet.ts fetches them
+// directly rather than through this method, same bypass rationale as
+// balance/transactions.
 const XRP_CAPABILITIES: ChainAdapterCapabilities = {
   addressValidation: true,
   balanceRetrieval: true,
   transactionRetrieval: true,
   transactionParsing: false,
-  tokenRetrieval: false,
+  tokenRetrieval: true,
   nftRetrieval: false,
   protocolDetection: false,
   internalTransferDetection: false,
@@ -178,8 +180,7 @@ export const xrpConnectorDescriptor: BlockchainConnectorDescriptor = {
   capabilities: XRP_CAPABILITIES,
   providerNames: ["XRPScan"],
   limitations: [
-    "Trust-line/issued-currency (non-XRP token) balances are not yet retrieved - getTokenBalances always returns an empty list. Support is planned as a later stage of this chain's rollout.",
-    "Reserve-requirement-aware balance interpretation is not yet implemented - the reported native balance includes the account's non-spendable reserve, not just the spendable portion.",
+    "Trust-line/issued-currency balances only count a line with a positive balance as a real holding (see getTokenBalances) - they are not priced in USD, since this chain's price provider only knows XRP's own price.",
     "Pagination beyond one page is not yet implemented in getTransactions - only the most recent page (XRPScan's own default page size) is returned, with hasMore reflecting whether a further page genuinely exists.",
     "Address validation is format-shape only (base58 prefix/length), not full checksum validation.",
   ],
@@ -273,21 +274,52 @@ export class XrpBlockchainConnector implements BlockchainConnector {
   async getTokenBalances(
     address: string,
   ): Promise<ChainOperationResult<TokenBalancesResult>> {
-    return createSuccessResult(
-      {
-        chainId: XRP_CHAIN_ID,
-        address: address.trim(),
-        balances: [],
-        retrievedAt: new Date().toISOString(),
-      },
-      [
+    try {
+      const trimmedAddress = address.trim();
+      const { lines } = await getXrplTrustLines(trimmedAddress);
+
+      // Only positive-balance lines are real holdings - see
+      // parsers/xrplTransaction.ts's buildXrplTokenHoldings doc comment
+      // for why a zero or negative trust-line balance is not one.
+      const balances = lines
+        .filter((line) => {
+          const balance = Number(line.balance);
+          return Number.isFinite(balance) && balance > 0;
+        })
+        .map((line) => ({
+          asset: {
+            chainId: XRP_CHAIN_ID,
+            assetType: "fungible_token" as const,
+            assetId: buildXrplTokenId(line.currency, line.account),
+            symbol: line.currency,
+            name: null,
+            decimals: 0,
+            contractAddress: line.account,
+            tokenId: null,
+          },
+          rawAmount: line.balance,
+          decimalAmount: line.balance,
+          estimatedUsdValue: null,
+        }));
+
+      return createSuccessResult(
         {
-          code: "XRP_TRUST_LINES_NOT_YET_RETRIEVED",
-          message:
-            "Trust-line/issued-currency balances are not yet retrieved for this wallet - this list is always empty for now, not an indication the wallet holds no other assets. Support is planned as a later stage of this chain's rollout.",
+          chainId: XRP_CHAIN_ID,
+          address: trimmedAddress,
+          balances,
+          retrievedAt: new Date().toISOString(),
         },
-      ],
-    );
+        [
+          {
+            code: "XRP_TRUST_LINES_NOT_PRICED",
+            message:
+              "Trust-line/issued-currency balances are not priced in USD - this chain's price provider only knows XRP's own price.",
+          },
+        ],
+      );
+    } catch (error) {
+      return createErrorResult(error, "XRP_TRUST_LINES_RETRIEVAL_FAILED");
+    }
   }
 
   async getTransactions(
