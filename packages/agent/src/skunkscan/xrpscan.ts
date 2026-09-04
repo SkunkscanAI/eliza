@@ -259,3 +259,42 @@ export async function getXrplRecentAccountTransactions(
 
   return transactions.slice(0, targetCount);
 }
+
+// Live-verified against a real account with real trust lines
+// (rf1BiGeXwwQoi8Z2ueFYTEXSwuJYfV2Jpn, XRPScan's own documented example -
+// confirmed to actually return real, varied trust-line data, not a stub).
+// Real, important finding from that verification: `balance` is a signed
+// decimal STRING, and can genuinely be NEGATIVE (e.g. "-14.0301") - XRPL
+// trust lines are a single bidirectional ledger object shared by both
+// accounts, and which side reports a positive vs. negative balance depends
+// on address ordering, not on which account "really" holds the asset. A
+// negative balance here means this account is the effective issuer side of
+// that specific trust line (counterparties hold IOUs FROM this account),
+// not that this account holds a negative amount of anything - callers must
+// filter to balance > 0 to get real HOLDINGS, not blindly use every line.
+export type XrpscanTrustLine = {
+  account: string;
+  currency: string;
+  balance: string;
+  limit: string;
+  limit_peer: string;
+  no_ripple?: boolean;
+  no_ripple_peer?: boolean;
+  freeze?: boolean;
+  freeze_peer?: boolean;
+};
+
+export type XrpscanTrustLines = {
+  account: string;
+  lines: XrpscanTrustLine[];
+};
+
+export async function getXrplTrustLines(
+  address: string,
+): Promise<XrpscanTrustLines> {
+  return callXrpscanRest<XrpscanTrustLines>(
+    // "trustlines2", not "trustlines" - live-confirmed real endpoint name
+    // (XRPScan's own docs use this exact path).
+    `/account/${encodeURIComponent(address)}/trustlines2`,
+  );
+}

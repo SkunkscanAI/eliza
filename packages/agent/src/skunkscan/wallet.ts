@@ -29,9 +29,11 @@ import { parseBitcoinTransaction } from "./parsers/bitcoinTransaction";
 import {
   getXrplAccountInfo,
   getXrplRecentAccountTransactions,
+  getXrplTrustLines,
 } from "./xrpscan";
 import {
   buildXrplActivationTransaction,
+  buildXrplTokenHoldings,
   parseXrplTransaction,
 } from "./parsers/xrplTransaction";
 import {
@@ -2071,13 +2073,23 @@ warnings: investigationWarnings,
         const normalizedRecentParsedTransactions: ParsedWalletTransaction[] =
           rawTransactions.map(parseXrplTransaction);
 
-        // Trust-line/issued-currency holdings are not retrieved yet (PR 5
-        // of the staged build) - empty, not incomplete, matching Bitcoin's
-        // own "structurally no tokens yet" treatment of the same field.
-        const tokenHoldings: WalletTokenHolding[] = [];
+        // Trust-line (issued-currency) holdings - only lines with a real
+        // positive balance count as holdings (see
+        // buildXrplTokenHoldings's doc comment for why zero/negative
+        // lines are excluded, not just filtered by convention).
+        const { lines: trustLines } = await getXrplTrustLines(walletAddress);
+        const tokenHoldings: WalletTokenHolding[] =
+          buildXrplTokenHoldings(trustLines);
 
         const nativeAssetId = WRAPPED_NATIVE_ASSET_ID[chain];
         const priceProvider = getTokenPriceProvider(chain);
+        // Deliberately native-asset-only: rippleTokenPriceProvider (PR 1)
+        // has no real way to price an arbitrary issued currency and would
+        // incorrectly apply the XRP/USD rate to whatever token IDs it's
+        // asked about - requesting a price for issued-currency tokenIds
+        // here would silently mislabel their value as XRP's price. Token
+        // holdings without a price entry correctly fall back to
+        // estimatedUsdValue: null in portfolio.ts, not a fabricated one.
         const tokenPrices = priceProvider
           ? await priceProvider.getTokenPrices(
               nativeAssetId ? [nativeAssetId] : [],
@@ -2151,7 +2163,8 @@ warnings: investigationWarnings,
           // in portfolio.notes/reserveRequirementNative/
           // spendableNativeAmount for this specific wallet - not repeated
           // here as a generic warning.
-          "Trust-line/issued-currency (non-XRP token) holdings are not yet retrieved - portfolio/tokenCount reflect the native XRP balance only, not an indication the wallet holds nothing else. Planned as a later stage of this chain's rollout.",
+          "Trust-line (issued-currency) holdings only count a line as a real holding when its balance is positive - a zero balance means the trust line exists but was never used, and a negative balance means this wallet is the effective issuer side of that line (counterparties hold IOUs from it), neither of which this wallet actually holds as an asset.",
+          "Trust-line/issued-currency holdings are not priced in USD - the price provider for this chain only knows XRP's own price and would misrepresent an issued currency's value using the XRP/USD rate if asked, so these holdings correctly show no USD value rather than a fabricated one.",
           "XRP Ledger NFT (XLS-20) holdings are not yet retrieved - nftHoldings is always empty for now, not an indication the wallet holds none. Not yet implemented, not structurally impossible the way it is for Bitcoin.",
           `Funding, relationship, and exposure analysis is based on the ${recentTransactions.length} most recently analyzed transactions (plus this account's real, on-ledger activation record for its very first funding event) - a real counterparty or funding event further back than that window would not be reflected yet.`,
           "XRPScan exposes no ascending/oldest-first transaction listing - only the most recent transactions can be sampled, the same limitation this codebase's other account-based chains already have and disclose.",
