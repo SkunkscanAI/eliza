@@ -20,6 +20,7 @@ export const SUPPORTED_CHAINS = [
   "base",
   "bnb",
   "bitcoin",
+  "xrp",
 ] as const;
 
 export type SupportedChain = (typeof SUPPORTED_CHAINS)[number];
