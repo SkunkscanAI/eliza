@@ -335,3 +335,53 @@ export function lookupStaticBitcoinWalletLabel(
 
   return STATIC_BITCOIN_LABELS[address] ?? null;
 }
+
+// Same "deliberately small, first-party-only" bar as
+// STATIC_BITCOIN_LABELS above, applied to XRP Ledger. Binance was
+// investigated and left out: their Proof-of-Reserves page and both
+// transparency blog posts were fetched and read directly, and none
+// publish a static XRP address list (BTC/ETH/USDT/BUSD/USDC/BNB only -
+// XRP addresses sit behind a dynamic "Download All Address" button, not a
+// fetchable/verifiable first-party list). Kraken/Coinbase/Crypto.com/
+// CEX.IO/OKX/HTX were not found to publish one either.
+//
+// Both entries below were fetched directly from Bitfinex's own official
+// GitHub repository (github.com/bitfinexcom/pub/blob/main/wallets.txt) -
+// the same first-party source already used for Bitfinex's Bitcoin entries
+// above - not copied from a third-party list like Bithomp/XRPScan's own
+// account labels. Live-verified against XRPScan/rippled directly: the hot
+// wallet holds ~31.97M XRP with requireDestinationTag enabled (consistent
+// with an exchange hot wallet needing a tag per depositing user) and a
+// high sequence number (582,731 - heavy activity); the cold wallet holds
+// ~35.77M XRP with ownerCount 0 and a low sequence number (176 - light
+// activity), consistent with a reserve wallet.
+const STATIC_XRP_LABELS: Record<string, WalletLabel> = {
+  rLW9gnQo7BQhU6igk5keqYnH3TVrCxGRzm: {
+    address: "rLW9gnQo7BQhU6igk5keqYnH3TVrCxGRzm",
+    label: "Bitfinex (hot wallet)",
+    category: "centralized_exchange",
+    confidence: "high",
+    source: "static_registry",
+  },
+
+  rE3hWEGquaixF2XwirNbA1ds4m55LxNZPk: {
+    address: "rE3hWEGquaixF2XwirNbA1ds4m55LxNZPk",
+    label: "Bitfinex (cold wallet)",
+    category: "centralized_exchange",
+    confidence: "high",
+    source: "static_registry",
+  },
+};
+
+// XRP classic addresses (base58, "r..." prefix) are case-sensitive with no
+// EIP-55-style checksum-casing convention, same as Bitcoin's legacy/P2SH
+// addresses above - exact-match lookup, no normalization.
+export function lookupStaticXrpWalletLabel(
+  address: string | null | undefined,
+): WalletLabel | null {
+  if (!address) {
+    return null;
+  }
+
+  return STATIC_XRP_LABELS[address] ?? null;
+}

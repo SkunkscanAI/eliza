@@ -5,6 +5,7 @@ import {
   lookupStaticBnbWalletLabel,
   lookupStaticBaseWalletLabel,
   lookupStaticBitcoinWalletLabel,
+  lookupStaticXrpWalletLabel,
 } from "./staticRegistry";
 
 export function getUnknownWalletLabel(
@@ -50,6 +51,13 @@ export function lookupWalletLabel(
     // rotate per-user via HD derivation and never publish).
     case "bitcoin": {
       return lookupStaticBitcoinWalletLabel(address) ?? getUnknownWalletLabel(address);
+    }
+
+    // Same "deliberately small" caveat as Bitcoin's case above - see
+    // STATIC_XRP_LABELS's doc comment in staticRegistry.ts. Two confirmed
+    // Bitfinex hot/cold wallets only, not a general XRP exchange registry.
+    case "xrp": {
+      return lookupStaticXrpWalletLabel(address) ?? getUnknownWalletLabel(address);
     }
 
     default:
