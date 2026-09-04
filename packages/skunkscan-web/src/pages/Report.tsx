@@ -16,7 +16,7 @@ import { ArrowRight } from "../components/ui/icons";
 // identical constant and comment for why this needs to be absolute.
 const API_BASE_URL = import.meta.env.VITE_SKUNKSCAN_API_BASE_URL ?? "";
 
-const SUPPORTED_CHAINS = ["solana", "ethereum", "base", "bnb", "bitcoin"] as const;
+const SUPPORTED_CHAINS = ["solana", "ethereum", "base", "bnb", "bitcoin", "xrp"] as const;
 
 // Deliberately typed loosely (Record<string, any>-ish via `any` fields) at
 // the boundary rather than re-declaring the full WalletInvestigationResult

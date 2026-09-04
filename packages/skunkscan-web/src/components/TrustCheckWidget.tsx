@@ -21,7 +21,7 @@ const API_BASE_URL = import.meta.env.VITE_SKUNKSCAN_API_BASE_URL ?? "";
 // WalletTrustCheckCard shape in the same file - kept as a plain local copy
 // rather than a cross-package import since this page has no build-time
 // dependency on @elizaos/agent (it only talks to it over HTTP).
-const SUPPORTED_CHAINS = ["solana", "ethereum", "base", "bnb", "bitcoin"] as const;
+const SUPPORTED_CHAINS = ["solana", "ethereum", "base", "bnb", "bitcoin", "xrp"] as const;
 type SupportedChain = (typeof SUPPORTED_CHAINS)[number];
 
 const CHAIN_LABEL: Record<SupportedChain, string> = {
@@ -30,6 +30,7 @@ const CHAIN_LABEL: Record<SupportedChain, string> = {
   base: "Base",
   bnb: "BNB Chain",
   bitcoin: "Bitcoin",
+  xrp: "XRP Ledger",
 };
 
 type TrustCheckTier = "green" | "yellow" | "red";
