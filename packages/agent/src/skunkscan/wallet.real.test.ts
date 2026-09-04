@@ -42,6 +42,10 @@ describe("investigateWallet - pipeline field wiring regression guard", () => {
     { chain: "bnb" as const, address: "0x161ba15a5f335c9f06bb5bbb0a9ce14076fbb645" },
     { chain: "base" as const, address: "0x161ba15a5f335c9f06bb5bbb0a9ce14076fbb645" },
     { chain: "solana" as const, address: "CabQ27HBCj1FJTmMo3qJD12eL3sazNbnsxqLg1Yk2v7f" },
+    // A real, long-lived XRPL account (activated 2014-09-12 per its own
+    // on-ledger `inception` field, live-verified throughout the staged
+    // XRP build's PR 1-3 work) - not a fabricated/test address.
+    { chain: "xrp" as const, address: "rN7n7otQDd6FczFgLdSqtcsAUxDkw6fzRH" },
   ];
 
   // Every field runWalletPipeline() computes (see pipeline/walletPipeline.ts's

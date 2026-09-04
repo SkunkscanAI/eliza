@@ -1,4 +1,4 @@
-import { XrpscanTransaction } from "../xrpscan";
+import { XrpscanAccountInfo, XrpscanTransaction } from "../xrpscan";
 import { ParsedWalletTransaction } from "./transaction";
 
 // Built now (PR 2 of the staged XRP build) but not yet wired into
@@ -82,13 +82,53 @@ export function parseXrplTransaction(
 
   return {
     signature: transaction?.hash ?? null,
-    timestamp: transaction?.date ? Date.parse(transaction.date) / 1000 : null,
+    timestamp: transaction?.date
+      ? Math.floor(Date.parse(transaction.date) / 1000)
+      : null,
     nativeTransfers,
     tokenTransfers,
     // XRPL has no general-purpose smart-contract/program concept the way
     // EVM/Solana do (Payment/TrustSet/OfferCreate/etc. are protocol-level
     // transaction types, not calls into arbitrary deployed code) - empty
     // for every transaction, same as Bitcoin's parser.
+    programOrContractIds: [],
+  };
+}
+
+// XRPL treats account activation as a first-class, permanently-recorded
+// event (see xrpscan.ts's XrpscanAccountInfo doc comment) - unlike
+// Bitcoin/Ethereum, no transaction-history scan is needed to answer
+// funding.ts's question. Builds the same ParsedWalletTransaction shape a
+// real scanned "first transaction" would produce, from the account-info
+// fields directly, so funding.ts (which only knows how to read that
+// shape) needs no XRP-specific branch of its own. Returns null when the
+// activation record is absent (see the field's own doc comment) -
+// funding.ts already treats a null firstTransaction as "funding unknown,"
+// the same fallback every other chain uses for the same situation.
+export function buildXrplActivationTransaction(
+  accountInfo: XrpscanAccountInfo,
+): ParsedWalletTransaction | null {
+  if (
+    !accountInfo.parent ||
+    typeof accountInfo.initial_balance !== "number" ||
+    !Number.isFinite(accountInfo.initial_balance)
+  ) {
+    return null;
+  }
+
+  return {
+    signature: accountInfo.tx_hash ?? null,
+    timestamp: accountInfo.inception
+      ? Math.floor(Date.parse(accountInfo.inception) / 1000)
+      : null,
+    nativeTransfers: [
+      {
+        from: accountInfo.parent,
+        to: accountInfo.Account,
+        amountNative: accountInfo.initial_balance,
+      },
+    ],
+    tokenTransfers: [],
     programOrContractIds: [],
   };
 }
