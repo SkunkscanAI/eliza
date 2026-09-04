@@ -28,12 +28,12 @@ const FAQ_ITEMS = [
   },
   {
     question: "Which chains do you support?",
-    answer: "Ethereum, Solana, Base, BNB Chain, and Bitcoin today.",
+    answer: "Ethereum, Solana, Base, BNB Chain, Bitcoin, and the XRP Ledger today.",
   },
   {
     question: "Do you check sanctions lists?",
     answer:
-      "Yes, partially. We self-host the US Treasury's OFAC sanctions list and check every investigated wallet against it (Bitcoin, Ethereum, BNB Chain, and Solana directly; Base indirectly, since it shares Ethereum's address format). EU, UK, and UN sanctions lists aren't connected yet - see How It Works for exactly why. A \"no match\" result means \"not found on the OFAC list we checked,\" not \"cleared by every sanctions authority.\"",
+      "Yes, partially. We self-host the US Treasury's OFAC sanctions list and check every investigated wallet against it (Bitcoin, Ethereum, BNB Chain, Solana, and the XRP Ledger directly; Base indirectly, since it shares Ethereum's address format). EU, UK, and UN sanctions lists aren't connected yet - see How It Works for exactly why. A \"no match\" result means \"not found on the OFAC list we checked,\" not \"cleared by every sanctions authority.\"",
   },
 ];
 

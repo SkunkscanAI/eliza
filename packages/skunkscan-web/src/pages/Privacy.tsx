@@ -56,7 +56,7 @@ export function Privacy() {
         </LegalSection>
 
         <LegalSection title="4. Third-party data providers">
-          <p>SkunkScan's backend calls these providers, sending only the wallet address being checked:</p>
+          <p>SkunkScan's backend calls these providers, sending only the wallet address being checked (CoinGecko is the one exception - noted below):</p>
           <ul className="list-disc space-y-1 pl-5">
             <li>
               <strong>Helius</strong> - Solana on-chain data
@@ -68,7 +68,14 @@ export function Privacy() {
               <strong>Blockchair</strong> - Bitcoin on-chain data
             </li>
             <li>
+              <strong>XRPScan</strong> - XRP Ledger on-chain data
+            </li>
+            <li>
               <strong>Jupiter</strong> - Solana token pricing
+            </li>
+            <li>
+              <strong>CoinGecko</strong> - XRP price data (queried only for XRP's own market
+              price - your wallet address is never sent to CoinGecko)
             </li>
           </ul>
           <p>

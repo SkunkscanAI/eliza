@@ -40,6 +40,15 @@ const CHAIN_COVERAGE = [
       "For HD wallets, address coverage is whatever the gap-limit scan found - addresses outside that scan window aren't included.",
     ],
   },
+  {
+    chain: "XRP Ledger",
+    notes: [
+      "Full balance, trust-line (issued-currency) holdings, and transaction history.",
+      "Balance interpretation accounts for the XRP Ledger's own reserve requirement (a portion of your balance that's non-spendable by protocol rule) - what's shown as spendable already has that reserve subtracted, not left for you to work out.",
+      "Known-infrastructure detection is deliberately narrow here: it covers a single independently-verified exchange's hot and cold wallets only (currently Bitfinex). Most exchanges route deposits through one shared address disambiguated by a destination tag, which we don't yet check - a deposit to a known exchange address under a different tag than expected won't be flagged as such.",
+      "Trust-line balances are only counted as holdings when they're genuinely positive; a trust line can also read zero or negative depending on which side of it your account is on, and neither of those is an asset you actually hold.",
+    ],
+  },
 ];
 
 const HONEST_LIMITS = [
