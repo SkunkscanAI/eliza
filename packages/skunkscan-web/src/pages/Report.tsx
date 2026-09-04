@@ -404,7 +404,7 @@ export function Report() {
           </div>
           <p className="mb-6 text-sm text-ink-200 sm:text-base">
             SkunkScore measures this wallet's overall long-term quality and reputation - trust
-            history, smart-money behavior, and profitability. It's a separate question from the
+            history, smart-money behavior, and its Investor Skill Signal. It's a separate question from the
             Recommendation at the top of this report, which reflects only immediate transaction
             risk. A wallet can be safe to transact with right now while still scoring lower here,
             or the reverse.
@@ -446,7 +446,7 @@ export function Report() {
             <ScoreCard title="Conviction" level={conviction?.convictionLevel ?? "unknown"} displayScore={conviction?.displayScore ?? "-"} positive={conviction?.supportingSignals} negative={conviction?.conflictingSignals} limitations={conviction?.limitations} />
             <ScoreCard title="Alpha" level={alpha?.alphaLevel ?? "unknown"} displayScore={alpha?.displayScore ?? "-"} positive={alpha?.strengths} negative={alpha?.weaknesses} limitations={alpha?.limitations} />
             <ScoreCard title="Investment Style" level={investmentStyle?.style ?? "unknown"} displayScore={investmentStyle?.confidence ?? "-"} positive={investmentStyle?.supportingSignals} negative={investmentStyle?.conflictingSignals} />
-            <ScoreCard title="Profitability" level={profitability?.profitabilityLevel ?? "unknown"} displayScore={profitability?.displayScore ?? "-"} positive={profitability?.positiveIndicators} negative={profitability?.negativeIndicators} />
+            <ScoreCard title="Investor Skill Signal" level={profitability?.investorSkillLevel ?? "unknown"} displayScore={profitability?.displayScore ?? "-"} positive={profitability?.positiveIndicators} negative={profitability?.negativeIndicators} />
             <ScoreCard title="Reputation" level={reputation?.reputationLevel ?? "unknown"} displayScore={reputation?.displayScore ?? "-"} positive={reputation?.strengths} negative={reputation?.concerns} limitations={reputation?.limitations} />
           </div>
         </ReportSection>

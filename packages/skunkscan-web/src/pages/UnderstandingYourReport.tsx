@@ -53,12 +53,12 @@ const SCORES = [
     body: "A behavioral category (for example, long-term holder versus active trader) inferred from Strategy, Smart Money, Conviction, and Alpha together.",
   },
   {
-    name: "Profitability",
-    body: "Indicators of whether this wallet's observed activity looks profitable, based on Alpha, Conviction, Strategy, Trust, and Smart Money together - not a real, verified profit/loss calculation.",
+    name: "Investor Skill Signal",
+    body: "How closely this wallet's behavior resembles patterns historically associated with profitable investors, based on Alpha, Conviction, Strategy, Trust, and Smart Money together. This is a structural limitation, not a data-completeness gap: SkunkScan has no historical, point-in-time price data on any chain today, so it cannot calculate real trading profit or loss - no amount of additional transaction history would change that.",
   },
   {
     name: "Reputation",
-    body: "An aggregate standing signal combining Trust, Risk, Smart Money, Alpha, and Profitability into one summary read of this wallet's overall on-chain track record.",
+    body: "An aggregate standing signal combining Trust, Risk, Smart Money, Alpha, and the Investor Skill Signal into one summary read of this wallet's overall on-chain track record.",
   },
 ];
 

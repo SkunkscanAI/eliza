@@ -20,7 +20,7 @@ type ProfitabilityInput = {
 export function analyzeWalletProfitability(
   input: ProfitabilityInput,
 ): WalletProfitabilitySummary {
-  // profitabilityScore below is a weighted blend of alpha/smartMoney/trust/
+  // investorSkillScore below is a weighted blend of alpha/smartMoney/trust/
   // conviction - not hardcoded, a real computation. But alpha, smartMoney,
   // and conviction all read portfolio.diversityScore/diversityLevel
   // directly (see their own dataCompleteness handling), so when token
@@ -31,10 +31,10 @@ export function analyzeWalletProfitability(
   // positiveIndicators/negativeIndicators actually backing it.
   if (input.portfolio.dataCompleteness === "incomplete") {
     return {
-      profitabilityScore: 0,
+      investorSkillScore: 0,
       displayScore: "N/A",
-      profitabilityLevel: "unknown",
-      estimatedProfitability: "unknown",
+      investorSkillLevel: "unknown",
+      resemblesProfitablePattern: "unknown",
       confidence: "low",
       evidenceConfidence: "low",
       confidenceAnalysis: {
@@ -45,20 +45,20 @@ export function analyzeWalletProfitability(
         level: "low",
         reasons: [],
       },
-      investorHeadline: "Insufficient Data for Profitability",
+      investorHeadline: "Insufficient Data for Investor Skill Signal",
       investorSummary:
-        "Token holdings could not be fully retrieved for this wallet, so a profitability assessment could not be computed.",
+        "Token holdings could not be fully retrieved for this wallet, so an investor-skill-pattern assessment could not be computed.",
       investorTakeaway:
-        "This is not a low-profitability finding - it means the underlying portfolio data needed to assess profitability was incomplete (the token-holdings fetch was truncated or timed out).",
+        "This is not a weak-signal finding - it means the underlying portfolio data needed for this assessment was incomplete (the token-holdings fetch was truncated or timed out).",
       positiveIndicators: [],
       negativeIndicators: [],
       limitations: [
-        "Token holdings could not be fully retrieved for this wallet (the fetch was truncated or timed out) - profitability could not be assessed from incomplete portfolio data.",
+        "Token holdings could not be fully retrieved for this wallet (the fetch was truncated or timed out) - this assessment could not be computed from incomplete portfolio data.",
       ],
     };
   }
 
-  let profitabilityScore = 0;
+  let investorSkillScore = 0;
 
   // Surfaces the blend's own real inputs' already-computed reasons, rather
   // than reinventing explanation logic - alpha.ts and conviction.ts already
@@ -84,20 +84,20 @@ export function analyzeWalletProfitability(
   ];
   const limitations: string[] = [];
 
-  profitabilityScore += Math.round(input.alpha.alphaScore * 0.35);
-  profitabilityScore += Math.round(input.smartMoney.smartMoneyScore * 0.25);
-  profitabilityScore += Math.round(input.trust.trustScore * 0.20);
-  profitabilityScore += Math.round(input.conviction.convictionScore * 0.20);
+  investorSkillScore += Math.round(input.alpha.alphaScore * 0.35);
+  investorSkillScore += Math.round(input.smartMoney.smartMoneyScore * 0.25);
+  investorSkillScore += Math.round(input.trust.trustScore * 0.20);
+  investorSkillScore += Math.round(input.conviction.convictionScore * 0.20);
 
-  profitabilityScore = Math.min(100, profitabilityScore);
+  investorSkillScore = Math.min(100, investorSkillScore);
 
   if (input.strategy.primaryStrategy === "holding") {
-    profitabilityScore += 5;
+    investorSkillScore += 5;
     positiveIndicators.push("Long-term holding behavior detected.");
   }
 
   if (input.strategy.primaryStrategy === "accumulating") {
-    profitabilityScore += 5;
+    investorSkillScore += 5;
     positiveIndicators.push("Accumulation behavior detected.");
   }
 
@@ -109,13 +109,13 @@ export function analyzeWalletProfitability(
     input.portfolio.diversityApplicable &&
     input.portfolio.diversityLevel === "high"
   ) {
-    profitabilityScore += 5;
+    investorSkillScore += 5;
     positiveIndicators.push("High portfolio diversification.");
   }
 
-  profitabilityScore = Math.min(100, profitabilityScore);
+  investorSkillScore = Math.min(100, investorSkillScore);
 
-  let profitabilityLevel:
+  let investorSkillLevel:
     | "unknown"
     | "weak"
     | "limited"
@@ -123,67 +123,67 @@ export function analyzeWalletProfitability(
     | "strong"
     | "very_strong";
 
-  if (profitabilityScore >= 90) {
-    profitabilityLevel = "very_strong";
-  } else if (profitabilityScore >= 75) {
-    profitabilityLevel = "strong";
-  } else if (profitabilityScore >= 55) {
-    profitabilityLevel = "moderate";
-  } else if (profitabilityScore >= 35) {
-    profitabilityLevel = "limited";
-  } else if (profitabilityScore > 0) {
-    profitabilityLevel = "weak";
+  if (investorSkillScore >= 90) {
+    investorSkillLevel = "very_strong";
+  } else if (investorSkillScore >= 75) {
+    investorSkillLevel = "strong";
+  } else if (investorSkillScore >= 55) {
+    investorSkillLevel = "moderate";
+  } else if (investorSkillScore >= 35) {
+    investorSkillLevel = "limited";
+  } else if (investorSkillScore > 0) {
+    investorSkillLevel = "weak";
   } else {
-    profitabilityLevel = "unknown";
+    investorSkillLevel = "unknown";
   }
 
-  let estimatedProfitability:
+  let resemblesProfitablePattern:
     | "unknown"
     | "unlikely"
     | "possible"
     | "likely";
 
-  if (profitabilityScore >= 75) {
-    estimatedProfitability = "likely";
-  } else if (profitabilityScore >= 45) {
-    estimatedProfitability = "possible";
-  } else if (profitabilityScore > 0) {
-    estimatedProfitability = "unlikely";
+  if (investorSkillScore >= 75) {
+    resemblesProfitablePattern = "likely";
+  } else if (investorSkillScore >= 45) {
+    resemblesProfitablePattern = "possible";
+  } else if (investorSkillScore > 0) {
+    resemblesProfitablePattern = "unlikely";
   } else {
-    estimatedProfitability = "unknown";
+    resemblesProfitablePattern = "unknown";
   }
 
   const confidence =
-    profitabilityScore >= 70
+    investorSkillScore >= 70
       ? "high"
-      : profitabilityScore >= 40
+      : investorSkillScore >= 40
       ? "medium"
       : "low";
 
   limitations.push(
-    "This assessment estimates profitability characteristics using observable blockchain evidence and should not be interpreted as realized profit or investment returns.",
+    "This score measures behavioral resemblance to patterns commonly associated with profitable investors using observable blockchain evidence - it does not measure actual trading profit or loss. No historical, point-in-time price data exists anywhere in this pipeline on any chain (spot-price-only today), so a real profit/loss calculation cannot be computed. This is a structural limitation, not a data-completeness gap - no amount of additional transaction history would change it.",
   );
 
   return {
-    profitabilityScore,
-    displayScore: `${(profitabilityScore / 10).toFixed(1)} / 10`,
-    profitabilityLevel,
-    estimatedProfitability,
+    investorSkillScore,
+    displayScore: `${(investorSkillScore / 10).toFixed(1)} / 10`,
+    investorSkillLevel,
+    resemblesProfitablePattern,
     confidence,
     evidenceConfidence: confidence,
     confidenceAnalysis: {
-      rawScore: profitabilityScore,
+      rawScore: investorSkillScore,
       maxScore: 100,
-      displayScore: `${(profitabilityScore / 10).toFixed(1)} / 10`,
+      displayScore: `${(investorSkillScore / 10).toFixed(1)} / 10`,
       maxDisplayScore: 10,
       level: confidence,
       reasons: positiveIndicators,
     },
-    investorHeadline: "Profitability Indicators",
+    investorHeadline: "Investor Skill Signal",
     investorSummary:
-      "This score estimates whether the wallet demonstrates characteristics commonly associated with profitable long-term investors.",
+      "This score estimates how closely this wallet's behavior resembles patterns historically associated with profitable investors - it does not measure actual trading profit or loss. SkunkScan has no historical, point-in-time price data for any chain today, so a real profit/loss calculation ('what was this token worth when the wallet bought or sold it') cannot be computed, regardless of how much transaction history is analyzed.",
     investorTakeaway:
-      "The score is evidence-based and does not represent realized profit or financial advice.",
+      "A high score means the wallet's behavior matches patterns often seen in profitable investors - not that this wallet has actually made money. This is a structural limitation, not a data-completeness gap: no amount of additional transaction history would let SkunkScan calculate real gains or losses without historical pricing data, which doesn't exist in the pipeline today.",
     positiveIndicators,
     negativeIndicators,
     limitations,
