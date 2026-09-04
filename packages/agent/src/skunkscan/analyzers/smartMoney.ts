@@ -129,9 +129,16 @@ export function analyzeWalletSmartMoney(
           ? "low"
           : "none";
 
+  // Gated on whaleLevel medium/large, not the broader isWhale flag - isWhale
+  // is also true at whaleLevel "small", which whale.ts's own explanation
+  // text already hedges as "does not necessarily mean the wallet controls a
+  // high-value portfolio" (up to 60 of its 100 points come from non-monetary
+  // signals like age/activity/funding). Using isWhale here previously let a
+  // wallet with a genuinely small portfolio (e.g. real-world case: ~$38)
+  // pick up this classification purely from those non-monetary signals.
   const profile =
-    whale.isWhale
-      ? "whale_participant"
+    whale.whaleLevel === "medium" || whale.whaleLevel === "large"
+      ? "portfolio_scale_participant"
       : defi.profile === "active_defi_user" ||
           defi.profile === "power_user"
         ? "active_defi_participant"

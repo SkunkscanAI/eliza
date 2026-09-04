@@ -28,8 +28,12 @@ export function analyzeWalletBehavior(
   const traits: string[] = [];
   const limitations: string[] = [];
 
-  if (whale.isWhale) {
-    primaryProfile = "whale";
+  // Gated on whaleLevel medium/large, not the broader isWhale flag - see
+  // smartMoney.ts's identical comment for why isWhale alone (true even at
+  // whaleLevel "small") previously let a genuinely small portfolio
+  // (real-world case: ~$38) pick up this classification.
+  if (whale.whaleLevel === "medium" || whale.whaleLevel === "large") {
+    primaryProfile = "portfolio_scale";
     confidence = "high";
     traits.push("Large portfolio detected.");
   } else if (risk.level === "high") {
@@ -201,7 +205,7 @@ function buildExplanation(
   profile: WalletBehaviorSummary["primaryProfile"],
 ): string {
   switch (profile) {
-    case "whale":
+    case "portfolio_scale":
       return "This wallet appears to control a significant portfolio.";
 
     case "active_trader":

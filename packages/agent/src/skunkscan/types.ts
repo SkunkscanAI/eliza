@@ -874,7 +874,7 @@ export type WalletBehaviorSummary = {
     | "active_trader"
     | "defi_user"
     | "liquidity_provider"
-    | "whale"
+    | "portfolio_scale"
     | "high_risk_wallet";
 
   evidenceConfidence: "low" | "medium" | "high";
@@ -1272,7 +1272,7 @@ export type WalletSmartMoneySummary = {
     | "active_defi_participant"
     | "long_term_investor"
     | "liquidity_provider"
-    | "whale_participant";
+    | "portfolio_scale_participant";
 
   positiveSignals: string[];
 
@@ -1414,7 +1414,7 @@ export type WalletInvestmentStyleSummary = {
     | "defi_investor"
     | "yield_farmer"
     | "meme_coin_trader"
-    | "whale_investor"
+    | "portfolio_scale_investor"
     | "passive_holder"
     | "diversified_investor"
     | "mixed";
