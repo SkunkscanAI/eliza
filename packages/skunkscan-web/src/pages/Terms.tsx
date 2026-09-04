@@ -25,8 +25,8 @@ export function Terms() {
         <LegalSection title="2. What SkunkScan is">
           <p>
             SkunkScan is a wallet risk-check tool. You paste a public wallet address for a
-            supported blockchain (currently Ethereum, Solana, Base, BNB Chain, Bitcoin, and the
-            XRP Ledger), and
+            supported blockchain (currently Bitcoin, Ethereum, BNB Chain, XRP Ledger, Solana, and
+            Base), and
             SkunkScan analyzes real on-chain data to return a risk summary - a free Trust Check
             (green/yellow/red plus reasons), and a more detailed full investigation report.
           </p>
@@ -86,8 +86,8 @@ export function Terms() {
         <LegalSection title="7. Third-party data providers">
           <p>
             SkunkScan's backend retrieves on-chain data from third-party blockchain data
-            providers to produce its results: Helius (Solana), Moralis (Ethereum, Base, and BNB
-            Chain), Blockchair (Bitcoin), XRPScan (XRP Ledger), and Jupiter (Solana token
+            providers to produce its results: Blockchair (Bitcoin), Moralis (Ethereum, BNB
+            Chain, and Base), XRPScan (XRP Ledger), Helius (Solana), and Jupiter (Solana token
             pricing). Only the wallet address you submit is sent to these providers, from
             SkunkScan's server - your browser never contacts them directly. XRP Ledger price
             data is separately sourced from CoinGecko, which is queried only for XRP's own
