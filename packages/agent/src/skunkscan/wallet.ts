@@ -26,11 +26,14 @@ import {
 } from "./parsers/transaction";
 import { parseEthereumTransaction } from "./parsers/ethereumTransaction";
 import { parseBitcoinTransaction } from "./parsers/bitcoinTransaction";
-import { getXrplAccountInfo, getXrplAccountTransactions } from "./xrpscan";
-import { analyzeWalletActivity } from "./analyzers/activity";
-import { analyzeWalletAge } from "./analyzers/walletAge";
-import { analyzeWalletDormancy } from "./analyzers/walletDormancy";
-import { analyzeWalletPortfolio } from "./analyzers/portfolio";
+import {
+  getXrplAccountInfo,
+  getXrplRecentAccountTransactions,
+} from "./xrpscan";
+import {
+  buildXrplActivationTransaction,
+  parseXrplTransaction,
+} from "./parsers/xrplTransaction";
 import {
   SupportedChain,
   UniversalNftHolding,
@@ -50,6 +53,12 @@ const MAX_RECENT_TOKEN_ACTIVITY_ITEMS = 10;
 // branch's connector.getTransactions() call.
 const TRANSACTION_LIST_LIMIT = 1000;
 const TRANSACTIONS_TO_PARSE_LIMIT = 100;
+
+// XRPScan's page size is fixed at 25 (see xrpscan.ts's
+// getXrplRecentAccountTransactions) - this matches Ethereum's own 100-
+// transaction sample size for parity across account-based chains, rather
+// than settling for one XRPScan page's worth.
+const XRP_TRANSACTION_SAMPLE_SIZE = 100;
 
 // Fallback for when getTokenBalances can't enumerate a wallet's full
 // token list (see the ETHEREUM_TOKEN_BALANCE_COUNT_EXCEEDS_PROVIDER_LIMIT
@@ -1992,21 +2001,25 @@ warnings: investigationWarnings,
       }
     }
 
-    // PR 2 of the staged XRP Ledger build - deliberately partial. Wired
-    // only through activity/age/dormancy/portfolio, same as the approved
-    // plan: funding/relationships/exposure and the rest of
-    // runWalletPipeline()'s ~35 fields are PR 3, not this one. There is no
-    // pipeline call at all yet - the fields below are computed directly,
-    // the same individual analyzer functions runWalletPipeline() calls
-    // internally for every other chain, just not yet assembled through it
-    // here.
+    // PR 3 of the staged XRP Ledger build - full pipeline wiring. Same
+    // field set as chains/bitcoin.ts's branch (the closest full
+    // precedent), cross-checked field-by-field against
+    // pipeline/walletPipeline.ts's actual return statement and against
+    // that branch's own destructuring/return objects, not assumed from
+    // memory - see the PR's own commit message for the explicit diff
+    // performed. transactionRiskAssessment is the one pipeline output with
+    // no destination field on WalletInvestigationResult (intentionally
+    // internal-only) and is correctly not destructured/returned here,
+    // same as every other chain.
     case "xrp": {
       try {
-        // One call answers both balance AND age (inception) - see
-        // chains/xrp.ts's header comment for why this bypasses the
+        // One call answers balance, age (inception), AND funding
+        // (parent/initial_balance/tx_hash) - see chains/xrp.ts's header
+        // comment and parsers/xrplTransaction.ts's
+        // buildXrplActivationTransaction for why this bypasses the
         // connector's own getNativeBalance()/getOldestTransaction()
         // methods (which exist and work, just aren't the path taken here)
-        // rather than making two requests to the same underlying endpoint.
+        // rather than making several requests to the same endpoint.
         const accountInfo = await getXrplAccountInfo(walletAddress);
 
         const xrpBalance = Number(accountInfo.xrpBalance);
@@ -2031,10 +2044,17 @@ warnings: investigationWarnings,
           ? parsedInceptionAt
           : null;
 
-        const age = analyzeWalletAge(null, inceptionAt);
+        const firstParsedTransaction =
+          buildXrplActivationTransaction(accountInfo);
 
-        const { transactions: rawTransactions } =
-          await getXrplAccountTransactions(walletAddress);
+        // See xrpscan.ts's getXrplRecentAccountTransactions doc comment -
+        // XRPScan's real page size is fixed at 25, this loops via the real
+        // marker token to assemble a 100-transaction sample, matching
+        // Ethereum's own sample size.
+        const rawTransactions = await getXrplRecentAccountTransactions(
+          walletAddress,
+          XRP_TRANSACTION_SAMPLE_SIZE,
+        );
 
         const recentTransactions: WalletRecentTransaction[] =
           rawTransactions.map((transaction) => ({
@@ -2048,8 +2068,8 @@ warnings: investigationWarnings,
                 : "failed",
           }));
 
-        const activity = analyzeWalletActivity(recentTransactions);
-        const dormancy = analyzeWalletDormancy(activity.lastActiveAt);
+        const normalizedRecentParsedTransactions: ParsedWalletTransaction[] =
+          rawTransactions.map(parseXrplTransaction);
 
         // Trust-line/issued-currency holdings are not retrieved yet (PR 5
         // of the staged build) - empty, not incomplete, matching Bitcoin's
@@ -2064,13 +2084,73 @@ warnings: investigationWarnings,
             )
           : {};
 
-        const portfolio = analyzeWalletPortfolio(
-          walletBalance,
-          tokenHoldings,
-          tokenPrices,
+        const pipeline = await runWalletPipeline({
           chain,
-          false,
+          address: walletAddress,
+          balance: walletBalance,
+          tokenHoldings,
+          recentTransactions,
+          oldestTransactionId: accountInfo.tx_hash ?? undefined,
+          oldestTransactionTimestamp: inceptionAt ?? undefined,
+          firstParsedTransaction,
+          normalizedRecentParsedTransactions,
+          tokenPrices,
+        });
+
+        const {
+          activity,
+          age,
+          dormancy,
+          funding,
+          portfolio,
+          risk,
+          whale,
+          defi,
+          protocols,
+          protocolIntelligence,
+          behavior,
+          exposure,
+          relationships,
+          custodyProfile,
+          complianceScreening,
+          intelligenceSources,
+          trust,
+          display,
+          caseSummary,
+          transactionRisk,
+          smartMoney,
+          strategy,
+          conviction,
+          alpha,
+          investmentStyle,
+          profitability,
+          reputation,
+          skunkScore,
+          investigationReplay,
+          evidenceRecords,
+          decision,
+          assessment,
+          intelligenceBrief,
+          evidence,
+          executiveVerdict,
+          investigationReport,
+          investigationNarrative,
+        } = pipeline;
+
+        const patternAlerts = await analyzeWalletPatternAlerts(
+          chain,
+          walletAddress,
+          relationships.relationships,
+          options?.db,
         );
+
+        const investigationWarnings: string[] = [
+          "The reported balance includes the account's XRP Ledger reserve requirement (a non-spendable minimum, currently 10 XRP plus a small amount per trust line) - it is not yet distinguished from the spendable balance. Planned as a later stage of this chain's rollout.",
+          "Trust-line/issued-currency (non-XRP token) holdings are not yet retrieved - portfolio/tokenCount reflect the native XRP balance only, not an indication the wallet holds nothing else. Planned as a later stage of this chain's rollout.",
+          "XRP Ledger NFT (XLS-20) holdings are not yet retrieved - nftHoldings is always empty for now, not an indication the wallet holds none. Not yet implemented, not structurally impossible the way it is for Bitcoin.",
+          `Funding, relationship, and exposure analysis is based on the ${recentTransactions.length} most recently analyzed transactions (plus this account's real, on-ledger activation record for its very first funding event) - a real counterparty or funding event further back than that window would not be reflected yet.`,
+          "XRPScan exposes no ascending/oldest-first transaction listing - only the most recent transactions can be sampled, the same limitation this codebase's other account-based chains already have and disclose.",
+        ];
 
         return {
           chain,
@@ -2079,17 +2159,48 @@ warnings: investigationWarnings,
           balance: walletBalance,
           tokenHoldings,
           portfolio,
+          nftHoldings: [],
+          whale,
+          defi,
+          protocols,
+          protocolIntelligence,
+          behavior,
+          exposure,
+          relationships,
+          display,
+          assessment,
+          intelligenceBrief,
+          custodyProfile,
+          complianceScreening,
+          intelligenceSources,
+          trust,
+          investigationReplay,
+          evidence,
+          evidenceRecords,
+          recentTransactions,
+          transactionCountSample: recentTransactions.length,
           activity,
           age,
           dormancy,
-          recentTransactions,
-          transactionCountSample: recentTransactions.length,
+          funding,
+          risk,
+          transactionRisk,
+          smartMoney,
+          strategy,
+          conviction,
+          alpha,
+          investmentStyle,
+          profitability,
+          reputation,
+          skunkScore,
+          executiveVerdict,
+          caseSummary,
+          decision,
+          investigationReport,
+          investigationNarrative,
+          patternAlerts,
           summary: `Wallet found. Current balance: ${xrpBalance.toFixed(6)} XRP. Recent transaction sample: ${recentTransactions.length}.`,
-          warnings: [
-            "This is a partial XRP Ledger investigation (an early stage of this chain's rollout) - funding, relationships, exposure, compliance screening, and every risk/trust/whale/pattern-alert signal are not yet computed for this chain. Only balance, wallet age, dormancy, activity, and portfolio are available so far.",
-            "The reported balance includes the account's XRP Ledger reserve requirement (a non-spendable minimum, currently 10 XRP plus a small amount per trust line) - it is not yet distinguished from the spendable balance.",
-            "Trust-line/issued-currency (non-XRP token) holdings are not yet retrieved - portfolio/tokenCount above reflect the native XRP balance only.",
-          ],
+          warnings: investigationWarnings,
         };
       } catch (error) {
         return {

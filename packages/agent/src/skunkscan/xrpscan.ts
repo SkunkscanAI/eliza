@@ -160,6 +160,21 @@ export type XrpscanAccountInfo = {
   // arguably more authoritative here: it's XRPL's own AccountRoot
   // creation record, not inferred from a paginated transaction scan.
   inception?: string;
+  // The account that funded this account's activation, and how much (in
+  // decimal XRP, not drops - live-confirmed: a real account's
+  // initial_balance of 30 matches a plausible real top-up amount, not
+  // 0.00003 XRP). Together with `inception` and `tx_hash`, this is a
+  // direct, authoritative "who funded this wallet and when" record -
+  // unlike Bitcoin/Ethereum, no scan of the transaction history is needed
+  // to answer analyzers/funding.ts's question, since XRPL treats account
+  // activation as a first-class, permanently-recorded ledger event.
+  // Absent only for accounts this tracking doesn't cover (e.g. one of the
+  // handful of XRPL genesis accounts) - treated as "funding unknown" by
+  // wallet.ts, the same fallback every other chain already has for a
+  // wallet whose first transaction can't be determined.
+  parent?: string;
+  initial_balance?: number;
+  tx_hash?: string;
 };
 
 export async function getXrplAccountInfo(
@@ -218,4 +233,29 @@ export async function getXrplAccountTransactions(
   return callXrpscanRest<XrpscanAccountTransactions>(
     `/account/${encodeURIComponent(address)}/transactions${query}`,
   );
+}
+
+// XRPScan's page size is fixed at 25 and ignores a `limit` query override
+// (live-confirmed: requesting limit=5 still returns 25) - this loops via
+// the real marker token to assemble a larger sample, matching this
+// codebase's other account-based chains' sample sizes (Ethereum: 100)
+// rather than settling for XRPScan's smaller default. Always returns the
+// MOST RECENT transactions (XRPScan exposes no ascending/oldest-first
+// mode either - live-confirmed a `forward=true` param is silently
+// ignored), same limitation every other chain's "recent sample, not full
+// history" analysis already has and discloses.
+export async function getXrplRecentAccountTransactions(
+  address: string,
+  targetCount: number,
+): Promise<XrpscanTransaction[]> {
+  const transactions: XrpscanTransaction[] = [];
+  let marker: string | undefined;
+
+  do {
+    const page = await getXrplAccountTransactions(address, marker);
+    transactions.push(...page.transactions);
+    marker = page.marker;
+  } while (marker && transactions.length < targetCount);
+
+  return transactions.slice(0, targetCount);
 }
