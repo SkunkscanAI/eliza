@@ -161,6 +161,7 @@ export async function runWalletPipeline(
     whale,
     defi,
     behavior,
+    exposure,
   );
 
   const transactionRisk = analyzeWalletTransactionRisk(

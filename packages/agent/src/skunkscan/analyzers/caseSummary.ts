@@ -3,10 +3,12 @@ import {
   WalletBehaviorSummary,
   WalletCaseSummary,
   WalletDeFiSummary,
+  WalletExposureSummary,
   WalletRiskSummary,
   WalletWhaleSummary,
 } from "../types";
 import { describeConnectedSources, getSystemSourcesChecked } from "./sourceDisclosure";
+import { elevateRecommendationForExposure } from "./recommendationEscalation";
 
 export function analyzeWalletCaseSummary(
   age: WalletAgeSummary,
@@ -14,6 +16,7 @@ export function analyzeWalletCaseSummary(
   whale: WalletWhaleSummary,
   defi: WalletDeFiSummary,
   behavior: WalletBehaviorSummary,
+  exposure: WalletExposureSummary,
 ): WalletCaseSummary {
   const keyFindings: string[] = [];
 
@@ -51,6 +54,23 @@ export function analyzeWalletCaseSummary(
     recommendation = "review";
   } else {
     recommendation = "allow";
+  }
+
+  // The check above only considers risk/behavior - a wallet can pass both
+  // and still have real exposure evidence (e.g. a direct OFAC sanctions
+  // match) that risk/behavior alone wouldn't surface. Escalates rather than
+  // recomputes from scratch, so this can't silently drift from
+  // executiveVerdict.ts's own exposure handling - see
+  // recommendationEscalation.ts's doc comment for why this is shared rather
+  // than duplicated.
+  recommendation = elevateRecommendationForExposure(
+    recommendation,
+    risk,
+    exposure,
+  );
+
+  if (exposure.exposureLevel !== "none") {
+    keyFindings.push(`Exposure level: ${exposure.exposureLevel}.`);
   }
 
   const headline =
