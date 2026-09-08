@@ -72,16 +72,34 @@ export function analyzeWalletProfitability(
   // narrow bonus conditions, so a sufficiently "middling on every axis"
   // wallet could still end up with empty indicators here. Not claiming
   // more than this actually delivers.
-  const positiveIndicators: string[] = [
-    ...input.alpha.strengths,
-    ...input.conviction.supportingSignals,
-    ...input.smartMoney.positiveSignals,
-    ...input.trust.positiveSignals,
-  ];
-  const negativeIndicators: string[] = [
-    ...input.alpha.weaknesses,
-    ...input.conviction.conflictingSignals,
-  ];
+  // Deduplicated (first-occurrence order preserved) because two different
+  // upstream analyzers can independently produce the identical sentence for
+  // the same underlying fact (e.g. smartMoney.ts and trust.ts both pushing
+  // "Wallet is established." off the same age classification) - concatenating
+  // 4 separately-computed arrays makes that a real possibility, not a
+  // hypothetical one, and it was live-confirmed happening. Currently this is
+  // purely cosmetic (React warns on the resulting duplicate list key in
+  // SignalList.tsx, but every duplicated entry renders identical content
+  // with no per-item state, so nothing is visibly wrong) - it would stop
+  // being cosmetic if these arrays ever gained per-item metadata (e.g. a
+  // unique evidence link per bullet), at which point deduplicating by exact
+  // string match could silently drop two entries that happen to share text
+  // but point at different evidence. Not a concern today since every entry
+  // here is plain, self-contained prose.
+  const positiveIndicators: string[] = Array.from(
+    new Set([
+      ...input.alpha.strengths,
+      ...input.conviction.supportingSignals,
+      ...input.smartMoney.positiveSignals,
+      ...input.trust.positiveSignals,
+    ]),
+  );
+  const negativeIndicators: string[] = Array.from(
+    new Set([
+      ...input.alpha.weaknesses,
+      ...input.conviction.conflictingSignals,
+    ]),
+  );
   const limitations: string[] = [];
 
   investorSkillScore += Math.round(input.alpha.alphaScore * 0.35);
