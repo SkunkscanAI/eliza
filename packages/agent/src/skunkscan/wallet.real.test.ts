@@ -122,3 +122,67 @@ describe("investigateWallet - pipeline field wiring regression guard", () => {
     );
   }
 });
+
+// Real regression guard for a second, separately-discovered bug class with
+// the exact same shape as the executiveVerdict/caseSummary gaps above: a
+// real, already-built safety mechanism (every connector's validateAddress())
+// existed but was never actually called from investigateWallet() - so a
+// wrong-chain address (e.g. a Solana address submitted with "bitcoin"
+// selected) went straight to the provider. Blockchair in particular does
+// zero server-side address-format validation (confirmed live - see
+// blockchair.ts's header comment) and returned a real HTTP 200 "never-used
+// address" shape for literally any string, so the investigation silently
+// "succeeded" with a fabricated-looking but meaningless result instead of a
+// clear error. Solana/XRP were only accidentally protected before the fix
+// (Helius/XRPScan happen to reject malformed input server-side) - not
+// something this codebase guaranteed - which is why every chain is asserted
+// here, not just Bitcoin.
+//
+// Unlike the describe block above, this doesn't need network access or the
+// 30s timeout: validateAddress() is a pure format check, and the fix
+// returns before any provider is ever called for a rejected address - so
+// this test only proves the fix, not provider availability.
+describe("investigateWallet - wrong-chain address validation regression guard", () => {
+  const WRONG_CHAIN_ADDRESSES = [
+    {
+      chain: "bitcoin" as const,
+      address: "CabQ27HBCj1FJTmMo3qJD12eL3sazNbnsxqLg1Yk2v7f",
+      wrongChainLabel: "a Solana address",
+    },
+    {
+      chain: "ethereum" as const,
+      address: "34xp4vRoCGJym3xR7yCVPFHoCNxv4Twseo",
+      wrongChainLabel: "a Bitcoin address",
+    },
+    {
+      chain: "bnb" as const,
+      address: "CabQ27HBCj1FJTmMo3qJD12eL3sazNbnsxqLg1Yk2v7f",
+      wrongChainLabel: "a Solana address",
+    },
+    {
+      chain: "base" as const,
+      address: "CabQ27HBCj1FJTmMo3qJD12eL3sazNbnsxqLg1Yk2v7f",
+      wrongChainLabel: "a Solana address",
+    },
+    {
+      chain: "solana" as const,
+      address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+      wrongChainLabel: "an Ethereum address",
+    },
+    {
+      chain: "xrp" as const,
+      address: "CabQ27HBCj1FJTmMo3qJD12eL3sazNbnsxqLg1Yk2v7f",
+      wrongChainLabel: "a Solana address",
+    },
+  ];
+
+  for (const { chain, address, wrongChainLabel } of WRONG_CHAIN_ADDRESSES) {
+    it(`rejects ${wrongChainLabel} with a real invalid_address error, not a fabricated-looking success, for ${chain}`, async () => {
+      const result = await investigateWallet(chain, address);
+
+      expect(result.status).toBe("invalid_address");
+      expect(result.summary).toContain(chain);
+      expect(result.warnings?.length ?? 0).toBeGreaterThan(0);
+    });
+  }
+});
