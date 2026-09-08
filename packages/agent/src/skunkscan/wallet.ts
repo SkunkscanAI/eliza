@@ -266,6 +266,37 @@ async function investigateWalletInternal(
     };
   }
 
+  // Real, live bug (found via manual testing, not a hypothetical): every
+  // connector already implements a real format check (validateAddress()),
+  // but nothing ever called it before this fix - a wrong-chain address
+  // (e.g. a Solana address submitted with "bitcoin" selected) went straight
+  // to the provider. Blockchair in particular does zero server-side address
+  // validation (see blockchair.ts's header comment) - it returns a real
+  // HTTP 200 "never-used address" shape (balance 0, transaction_count 0)
+  // for literally any string, indistinguishable from a genuine empty
+  // wallet, so the investigation silently "succeeded" with a fabricated-
+  // looking but meaningless result instead of a clear error. Solana/XRP
+  // were only accidentally safe today because Helius/XRPScan happen to do
+  // their own server-side format rejection - not because this codebase
+  // guaranteed it. Called once, generically, before any chain-specific
+  // branch, since every connector already implements this the same way -
+  // no per-chain special-casing needed.
+  const connector = requireBlockchainConnector(chain);
+  const addressValidation = await connector.validateAddress(walletAddress);
+
+  if (addressValidation.data?.isValid !== true) {
+    return {
+      chain,
+      address: walletAddress,
+      status: "invalid_address",
+      summary: `This doesn't look like a valid ${chain} address.`,
+      warnings: [
+        addressValidation.data?.reason ??
+          `The provided address does not match the expected format for ${chain}.`,
+      ],
+    };
+  }
+
   switch (chain) {
     case "solana": {
       try {

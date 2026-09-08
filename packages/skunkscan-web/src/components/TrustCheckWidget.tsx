@@ -190,7 +190,7 @@ export function TrustCheckWidget({ compact = false }: { compact?: boolean }) {
         </>
       )}
 
-      {error && !card && (
+      {error && (
         <p className="mt-4 text-sm text-signal-red" role="alert">
           {error}
         </p>
