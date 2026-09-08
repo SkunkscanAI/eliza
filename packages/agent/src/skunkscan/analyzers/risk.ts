@@ -1,5 +1,6 @@
 import {
   WalletActivitySummary,
+  WalletPatternAlert,
   WalletRiskSummary,
 } from "../types";
 
@@ -20,7 +21,8 @@ type RiskReasonCode =
   | "zero_native_balance"
   | "no_recent_activity"
   | "has_recent_activity"
-  | "failed_transactions";
+  | "failed_transactions"
+  | "pattern_alert_match";
 
 type RiskReason = {
   code: RiskReasonCode;
@@ -31,11 +33,41 @@ export function analyzeWalletRisk(
   nativeBalance: number,
   activity: WalletActivitySummary,
   nativeSymbol: string,
+  patternAlerts: WalletPatternAlert[],
 ): WalletRiskSummary {
   const reasons: RiskReason[] = [];
   const limitations: string[] = [];
 
   let score = 0;
+
+  /*
+   * Risk signal 0:
+   * A confirmed behavioral scam pattern was detected (see
+   * analyzers/patternAlerts.ts / patterns/raiseAndDrain.ts).
+   *
+   * This is not a disclosure-only signal the way exposure sits alongside
+   * caseSummary/decision - a genuine pattern match (all of the detector's
+   * strict conditions independently satisfied: a large drain shortly after
+   * a large inbound, then real, sustained dormancy) is itself direct
+   * evidence of elevated risk, so the score changes, not just how it's
+   * framed. Real bug this fixes: a wallet showing a genuine raise-and-drain
+   * match previously still displayed "Risk: 0.5/10" right next to the
+   * alert, with zero connection between them - patternAlerts was computed
+   * entirely outside this pipeline until this fix. Set high enough (100)
+   * to guarantee the "high" tier on its own regardless of every other
+   * signal below, rather than a partial bump that a clean balance/activity
+   * profile could dilute back down to "medium" or "low".
+   */
+  if (patternAlerts.length > 0) {
+    score += 100;
+
+    reasons.push({
+      code: "pattern_alert_match",
+      text: `Confirmed behavioral scam pattern detected: ${patternAlerts
+        .map((alert) => alert.evidenceSummary)
+        .join(" ")}`,
+    });
+  }
 
   /*
    * Risk signal 1:
@@ -186,6 +218,12 @@ export function analyzeWalletRisk(
     "The current risk model uses observable blockchain indicators and does not determine ownership, intent, identity, or legality.",
   );
 
+  if (patternAlerts.length > 0) {
+    limitations.push(
+      "A pattern alert is a behavioral observation, not a confirmed scam designation - it reflects a match against a known scam-behavior signature, not a human-reviewed determination.",
+    );
+  }
+
   /*
    * Investor Insights
    *
@@ -295,6 +333,41 @@ export function analyzeWalletRisk(
         limitations: [
           "A high calculated risk score does not by itself prove illegal activity, malicious intent, or common ownership.",
           "The result is limited by the transaction sample and intelligence sources available during the investigation.",
+        ],
+      }),
+    );
+  }
+
+  /*
+   * Pattern alert insight.
+   */
+  if (patternAlerts.length > 0) {
+    investorInsights.negative.push(
+      createInvestorInsight({
+        id: "pattern-alert-risk-indicators",
+
+        title: "Confirmed Behavioral Scam Pattern",
+
+        finding: patternAlerts
+          .map((alert) => alert.evidenceSummary)
+          .join(" "),
+
+        whyItMatters:
+          "A confirmed match against a known scam-behavior signature (e.g. a large drain shortly after a large inbound transfer, followed by sustained dormancy) is direct evidence of elevated risk, not a separate or unrelated finding.",
+
+        impact: "negative",
+
+        confidence,
+
+        severity: "critical",
+
+        evidenceRecordIds: [
+          "risk-assessment",
+        ],
+
+        limitations: [
+          "A pattern alert is a behavioral observation, not a confirmed scam designation, and does not by itself establish ownership, intent, identity, or legality.",
+          "Routine treasury consolidation to cold storage can produce a similar shape - the pattern's own detector specifically requires no further incoming activity afterward to reduce this false-positive risk, but it is not eliminated entirely.",
         ],
       }),
     );
@@ -478,6 +551,9 @@ function buildRiskExplanation(
 
       case "failed_transactions":
         return "Failed transactions were identified in the recent sample and contributed to the calculated risk score.";
+
+      case "pattern_alert_match":
+        return "A confirmed match against a known scam-behavior pattern was identified and is the dominant factor in this risk assessment.";
 
       default:
         return reason.text;

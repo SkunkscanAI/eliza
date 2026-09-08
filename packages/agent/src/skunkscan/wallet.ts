@@ -18,7 +18,6 @@ import { WRAPPED_NATIVE_ASSET_ID } from "./providers/priceProvider";
 import { getTokenPriceProvider } from "./providers/pricing/registry";
 import { createWalletInvestigation } from "./investigations/walletIntegration";
 import { runWalletPipeline } from "./pipeline/walletPipeline";
-import { analyzeWalletPatternAlerts } from "./analyzers/patternAlerts";
 import type { RuntimeDb } from "./candidates/sql";
 import {
   parseSolanaTransaction,
@@ -532,6 +531,8 @@ const investigationWarnings: string[] = [
   tokenHoldingsIncomplete: tokenBalancesResult.warnings.some(
     (warning) => warning.code === "SOLANA_TOKEN_HOLDINGS_TRUNCATED",
   ),
+  patternAlertAddress: walletAddress,
+  db: options?.db,
 });
 
 const {
@@ -572,6 +573,7 @@ const {
   decision,
   investigationReport,
   investigationNarrative,
+  patternAlerts,
 } = pipeline;
 
   const investigation = createWalletInvestigation({
@@ -591,13 +593,6 @@ const {
 });
 
 void investigation;
-
-  const patternAlerts = await analyzeWalletPatternAlerts(
-    chain,
-    walletAddress,
-    relationships.relationships,
-    options?.db,
-  );
 
         return {
   chain,
@@ -853,6 +848,8 @@ warnings: investigationWarnings,
           normalizedRecentParsedTransactions,
           tokenPrices,
           tokenHoldingsIncomplete: tokenBalanceCountExceedsProviderLimit,
+          patternAlertAddress: walletAddress,
+          db: options?.db,
         });
 
         const {
@@ -893,6 +890,7 @@ warnings: investigationWarnings,
           decision,
           investigationReport,
           investigationNarrative,
+          patternAlerts,
         } = pipeline;
 
         const investigation = createWalletInvestigation({
@@ -912,13 +910,6 @@ warnings: investigationWarnings,
         });
 
         void investigation;
-
-        const patternAlerts = await analyzeWalletPatternAlerts(
-          chain,
-          walletAddress,
-          relationships.relationships,
-          options?.db,
-        );
 
         return {
           chain,
@@ -1171,6 +1162,8 @@ warnings: investigationWarnings,
           normalizedRecentParsedTransactions,
           tokenPrices,
           tokenHoldingsIncomplete: tokenBalanceCountExceedsProviderLimit,
+          patternAlertAddress: walletAddress,
+          db: options?.db,
         });
 
         const {
@@ -1211,6 +1204,7 @@ warnings: investigationWarnings,
           decision,
           investigationReport,
           investigationNarrative,
+          patternAlerts,
         } = pipeline;
 
         const investigation = createWalletInvestigation({
@@ -1230,13 +1224,6 @@ warnings: investigationWarnings,
         });
 
         void investigation;
-
-        const patternAlerts = await analyzeWalletPatternAlerts(
-          chain,
-          walletAddress,
-          relationships.relationships,
-          options?.db,
-        );
 
         return {
           chain,
@@ -1493,6 +1480,8 @@ warnings: investigationWarnings,
           normalizedRecentParsedTransactions,
           tokenPrices,
           tokenHoldingsIncomplete: tokenBalanceCountExceedsProviderLimit,
+          patternAlertAddress: walletAddress,
+          db: options?.db,
         });
 
         const {
@@ -1533,6 +1522,7 @@ warnings: investigationWarnings,
           decision,
           investigationReport,
           investigationNarrative,
+          patternAlerts,
         } = pipeline;
 
         const investigation = createWalletInvestigation({
@@ -1552,13 +1542,6 @@ warnings: investigationWarnings,
         });
 
         void investigation;
-
-        const patternAlerts = await analyzeWalletPatternAlerts(
-          chain,
-          walletAddress,
-          relationships.relationships,
-          options?.db,
-        );
 
         return {
           chain,
@@ -1868,6 +1851,8 @@ warnings: investigationWarnings,
           firstParsedTransaction,
           normalizedRecentParsedTransactions,
           tokenPrices,
+          patternAlertAddress: walletAddress,
+          db: options?.db,
         });
 
         const {
@@ -1908,6 +1893,7 @@ warnings: investigationWarnings,
           decision,
           investigationReport,
           investigationNarrative,
+          patternAlerts,
         } = pipeline;
 
         const addressesInSample =
@@ -1959,13 +1945,6 @@ warnings: investigationWarnings,
             `This wallet's activity/transaction-count coverage extends to ${recentTransactions.length} transactions, but funding/relationship/counterparty-exposure analysis is based on real transfer data parsed from only the most recent ${TRANSACTIONS_TO_PARSE_LIMIT} of those (plus the oldest transaction, parsed separately for age/funding) - a deliberate cost/coverage tradeoff, not a silent gap. A real counterparty or funding event further back than that window would not be reflected in relationships/exposure yet.`,
           );
         }
-
-        const patternAlerts = await analyzeWalletPatternAlerts(
-          chain,
-          walletAddress,
-          relationships.relationships,
-          options?.db,
-        );
 
         return {
           chain,
@@ -2139,6 +2118,8 @@ warnings: investigationWarnings,
           normalizedRecentParsedTransactions,
           tokenPrices,
           xrpOwnerCount: accountInfo.OwnerCount,
+          patternAlertAddress: walletAddress,
+          db: options?.db,
         });
 
         const {
@@ -2179,14 +2160,8 @@ warnings: investigationWarnings,
           executiveVerdict,
           investigationReport,
           investigationNarrative,
+          patternAlerts,
         } = pipeline;
-
-        const patternAlerts = await analyzeWalletPatternAlerts(
-          chain,
-          walletAddress,
-          relationships.relationships,
-          options?.db,
-        );
 
         const investigationWarnings: string[] = [
           // The real reserve breakdown (how much of the balance is

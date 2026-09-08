@@ -21,6 +21,7 @@ import { analyzeInvestigationNarrative } from "../analyzers/investigationNarrati
 import { analyzeInvestigationReplay } from "../analyzers/investigationReplay";
 import { analyzeInvestigationReport } from "../analyzers/investigationReport";
 import { analyzeInvestmentStyle } from "../analyzers/investmentStyle";
+import { analyzeWalletPatternAlerts } from "../analyzers/patternAlerts";
 import { analyzeWalletPortfolio } from "../analyzers/portfolio";
 import { analyzeProtocolIntelligence } from "../analyzers/protocolIntelligence";
 import { analyzeWalletProfitability } from "../analyzers/profitability";
@@ -37,6 +38,7 @@ import { analyzeWalletWhaleStatus } from "../analyzers/whale";
 import { ParsedWalletTransaction } from "../parsers/transaction";
 import { TokenPrice } from "../providers/pricing/types";
 import { getWalletIntelligenceSources } from "../sources/registry";
+import { RuntimeDb } from "../candidates/sql";
 import {
   SupportedChain,
   WalletBalance,
@@ -80,6 +82,22 @@ export interface WalletPipelineInput {
   // requirement. undefined for every other chain - see portfolio.ts's own
   // doc comment for why this is the gate, not chain === "xrp" alone.
   xrpOwnerCount?: number;
+  // The wallet's address in its ORIGINAL casing, kept deliberately separate
+  // from `address` above - `address` is lowercased for EVM chains ("for
+  // matching purposes only", see wallet.ts's own comment), but
+  // analyzers/patternAlerts.ts's candidate-store lookups have always used
+  // the original casing, and switching that key now would silently orphan
+  // already-stored rows (a lookup miss re-inserting a "new" detection under
+  // a different-cased key for a wallet already reviewed). Same value
+  // wallet.ts always passed to analyzeWalletPatternAlerts() directly before
+  // this call moved inside the pipeline - not a new/different address.
+  patternAlertAddress: string;
+  // Optional so every existing caller without a booted agent runtime
+  // (standalone scripts, wallet.real.test.ts) keeps working unchanged -
+  // patternAlerts still runs as pure computation over already-fetched
+  // relationships without it, just without persistence/dedup. Same
+  // optionality investigateWallet() itself already had for this.
+  db?: RuntimeDb;
 }
 
 export type WalletActivityPipelineResult =
@@ -93,6 +111,9 @@ export type WalletDormancyPipelineResult =
 
 export type WalletFundingPipelineResult =
   ReturnType<typeof analyzeWalletFunding>;
+
+export type WalletPatternAlertsPipelineResult =
+  Awaited<ReturnType<typeof analyzeWalletPatternAlerts>>;
 
 export type WalletPortfolioPipelineResult =
   ReturnType<typeof analyzeWalletPortfolio>;
@@ -204,6 +225,7 @@ export interface WalletPipelineOutput {
   age: WalletAgePipelineResult;
   dormancy: WalletDormancyPipelineResult;
   funding: WalletFundingPipelineResult;
+  patternAlerts: WalletPatternAlertsPipelineResult;
   portfolio: WalletPortfolioPipelineResult;
   risk: WalletRiskPipelineResult;
   whale: WalletWhalePipelineResult;

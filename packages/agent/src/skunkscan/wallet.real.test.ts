@@ -59,6 +59,7 @@ describe("investigateWallet - pipeline field wiring regression guard", () => {
     "age",
     "dormancy",
     "funding",
+    "patternAlerts",
     "portfolio",
     "risk",
     "whale",

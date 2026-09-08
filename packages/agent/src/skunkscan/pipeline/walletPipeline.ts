@@ -18,6 +18,7 @@ import { analyzeWalletIntelligenceBrief } from "../analyzers/intelligenceBrief";
 import { analyzeInvestigationNarrative } from "../analyzers/investigationNarrative";
 import { analyzeInvestigationReplay } from "../analyzers/investigationReplay";
 import { analyzeInvestigationReport } from "../analyzers/investigationReport";
+import { analyzeWalletPatternAlerts } from "../analyzers/patternAlerts";
 import { analyzeWalletPortfolio } from "../analyzers/portfolio";
 import { analyzeProtocolIntelligence } from "../analyzers/protocolIntelligence";
 import { analyzeWalletProtocols } from "../analyzers/protocols";
@@ -67,6 +68,35 @@ export async function runWalletPipeline(
     input.balance.nativeSymbol,
   );
 
+  // Moved ahead of portfolio/risk/whale/defi/behavior (relationships only
+  // ever depended on funding + raw input, never on any of those) so
+  // patternAlerts below can run before risk.ts needs it - risk.ts and
+  // everything downstream of it keep their exact same relative order,
+  // just shifted a few lines later. See patternAlerts' own placement
+  // comment for why this reorder exists.
+  const relationships = analyzeWalletRelationships(
+    funding,
+    matchAddresses,
+    input.normalizedRecentParsedTransactions,
+    input.chain,
+  );
+
+  // Real, live bug this fixes: a genuine, algorithmically-confirmed
+  // raise-and-drain match (all 4 of detectRaiseAndDrainPattern's strict
+  // conditions satisfied) sat right next to a "Risk: 0.5/10" ScoreCard with
+  // zero connection between them - risk.ts and decision.ts were computed
+  // entirely inside this same function, before patternAlerts existed at
+  // all (it used to be computed in wallet.ts, strictly after this whole
+  // pipeline returned). Moved in here specifically so risk.ts (immediately
+  // below) and decision.ts (further down) can both see it - see risk.ts's
+  // and decision.ts's own comments for how each uses it.
+  const patternAlerts = await analyzeWalletPatternAlerts(
+    input.chain,
+    input.patternAlertAddress,
+    relationships.relationships,
+    input.db,
+  );
+
   const portfolio = analyzeWalletPortfolio(
     input.balance,
     input.tokenHoldings,
@@ -80,6 +110,7 @@ export async function runWalletPipeline(
     input.balance.nativeAmount,
     activity,
     input.balance.nativeSymbol,
+    patternAlerts,
   );
 
   const whale = analyzeWalletWhaleStatus(
@@ -112,13 +143,6 @@ export async function runWalletPipeline(
   whale,
   risk,
 );
-
-  const relationships = analyzeWalletRelationships(
-    funding,
-    matchAddresses,
-    input.normalizedRecentParsedTransactions,
-    input.chain,
-  );
 
   const exposure = analyzeWalletExposure(
     matchAddresses,
@@ -298,6 +322,7 @@ export async function runWalletPipeline(
     trust,
     exposure,
     transactionRisk,
+    patternAlerts,
   );
 
   const assessment = analyzeWalletAssessment(
@@ -353,6 +378,7 @@ export async function runWalletPipeline(
     age,
     dormancy,
     funding,
+    patternAlerts,
     portfolio,
     risk,
     whale,

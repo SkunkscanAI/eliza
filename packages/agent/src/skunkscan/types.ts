@@ -523,7 +523,8 @@ export type WalletDecisionFactor = {
     | "behavior"
     | "whale"
     | "smart_money"
-    | "transaction_risk";
+    | "transaction_risk"
+    | "pattern_alert";
 
   effect: "positive" | "negative" | "neutral";
 
