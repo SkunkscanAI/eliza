@@ -3,6 +3,7 @@ import {
   WalletDecisionSummary,
   WalletEvidenceRecord,
   WalletExposureSummary,
+  WalletPatternAlert,
   WalletRiskSummary,
   WalletTransactionRiskSummary,
   WalletTrustSummary,
@@ -16,6 +17,7 @@ export function analyzeWalletDecision(
   trust: WalletTrustSummary,
   exposure: WalletExposureSummary,
   transactionRisk: WalletTransactionRiskSummary,
+  patternAlerts: WalletPatternAlert[],
 ): WalletDecisionSummary {
   const factors: WalletDecisionFactor[] = [];
   const limitations: string[] = [];
@@ -88,6 +90,34 @@ export function analyzeWalletDecision(
         ? `Wallet exposure level is none, checked against ${describeConnectedSources(getSystemSourcesChecked())}.`
         : `Wallet exposure level is ${exposure.exposureLevel}.`,
     evidenceRecordIds: findEvidenceId("exposure-summary"),
+  });
+
+  // Real bug this fixes: a confirmed pattern alert (see
+  // analyzers/patternAlerts.ts / patterns/raiseAndDrain.ts) previously had
+  // no factor here at all - decision/executiveVerdict could reach "allow"
+  // for a wallet showing a genuine raise-and-drain match. weight 70 alone
+  // is enough to force the "high_risk" tier (negativeWeight >= 70) on its
+  // own, independent of every other factor - a confirmed match is treated
+  // as at least as serious as this model's strongest single existing
+  // signal, per the same reasoning risk.ts's own patternAlerts handling
+  // uses (a genuine match is direct risk evidence, not a disclosure-only
+  // addendum).
+  factors.push({
+    id: "pattern-alert-factor",
+    category: "pattern_alert",
+    effect: patternAlerts.length > 0 ? "negative" : "positive",
+    weight: patternAlerts.length > 0 ? 70 : 10,
+    description:
+      patternAlerts.length > 0
+        ? `A confirmed behavioral scam pattern was detected: ${patternAlerts
+            .map((alert) => alert.evidenceSummary)
+            .join(" ")}`
+        : "No confirmed behavioral scam patterns were detected.",
+    // No dedicated pattern-alert evidence record exists yet in
+    // evidenceRecords.ts (out of scope for this fix) - findEvidenceId
+    // already returns [] gracefully for an id that isn't present, same as
+    // every other factor above.
+    evidenceRecordIds: findEvidenceId("pattern-alert-summary"),
   });
 
   factors.push({
@@ -187,6 +217,12 @@ export function analyzeWalletDecision(
   if (trust.confidence === "low") {
     limitations.push(
       "Trust assessment confidence is low.",
+    );
+  }
+
+  if (patternAlerts.length > 0) {
+    limitations.push(
+      "A pattern alert is a behavioral observation, not a confirmed scam designation - it reflects a match against a known scam-behavior signature, not a human-reviewed determination.",
     );
   }
 
