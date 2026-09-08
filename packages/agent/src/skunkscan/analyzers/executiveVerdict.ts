@@ -10,6 +10,7 @@ import {
   WalletTrustSummary,
 } from "../types";
 import { describeConnectedSources, getSystemSourcesChecked } from "./sourceDisclosure";
+import { elevateRecommendationForExposure } from "./recommendationEscalation";
 
 export function analyzeExecutiveVerdict(
   display: WalletDisplaySummary,
@@ -94,25 +95,19 @@ function determineLegacyVerdict(
   exposure: WalletExposureSummary,
   caseSummary: WalletCaseSummary,
 ): WalletExecutiveVerdict["verdict"] {
-  if (
-    risk.level === "high" ||
-    exposure.exposureLevel === "high"
-  ) {
-    return "high_risk";
-  }
+  // Reuses the same exposure-escalation rule caseSummary.ts itself already
+  // applies to caseSummary.recommendation - see
+  // recommendationEscalation.ts's doc comment. caseSummary.recommendation
+  // is already exposure-aware by the time it reaches here, so this mainly
+  // guards against risk having changed since caseSummary.ts ran; mapping
+  // "allow" to this function's own "low_risk" naming.
+  const escalated = elevateRecommendationForExposure(
+    caseSummary.recommendation,
+    risk,
+    exposure,
+  );
 
-  if (caseSummary.recommendation === "investigate") {
-    return "investigate";
-  }
-
-  if (
-    caseSummary.recommendation === "review" ||
-    exposure.exposureLevel === "medium"
-  ) {
-    return "review";
-  }
-
-  return "low_risk";
+  return escalated === "allow" ? "low_risk" : escalated;
 }
 
 function buildHeadline(
