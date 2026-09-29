@@ -2,6 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Button } from "./ui/button";
 import { ShieldCheck } from "./ui/icons";
 import { cn } from "../lib/utils";
+import { useAuth } from "../lib/AuthContext";
 
 // FAQ and Contact are secondary pages, linked from the footer instead of
 // here - see Footer.tsx.
@@ -14,10 +15,11 @@ const NAV_LINKS = [
 
 export function Header() {
   const location = useLocation();
+  const { user } = useAuth();
 
   return (
     <header className="border-b border-ink-800">
-      <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6">
+      <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-4 px-4 sm:px-6">
         <Link to="/" className="flex items-center gap-2 font-semibold text-ink-50">
           <ShieldCheck className="h-6 w-6 text-signal-green" />
           <span>SkunkScan</span>
@@ -38,9 +40,26 @@ export function Header() {
           ))}
         </nav>
 
-        <Button asChild size="sm">
-          <Link to="/check">Check a wallet</Link>
-        </Button>
+        <div className="flex items-center gap-4">
+          {user ? (
+            <Link
+              to="/account"
+              className="hidden max-w-[10rem] truncate text-sm text-ink-200 hover:text-ink-50 sm:inline"
+            >
+              {user.email}
+            </Link>
+          ) : (
+            user !== undefined && (
+              <Link to="/login" className="hidden text-sm text-ink-200 hover:text-ink-50 sm:inline">
+                Log in
+              </Link>
+            )
+          )}
+
+          <Button asChild size="sm">
+            <Link to="/check">Check a wallet</Link>
+          </Button>
+        </div>
       </div>
     </header>
   );

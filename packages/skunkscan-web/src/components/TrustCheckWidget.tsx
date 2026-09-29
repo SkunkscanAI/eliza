@@ -5,17 +5,7 @@ import { Input } from "./ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { ArrowRight, ChevronDown, ShieldCheck } from "./ui/icons";
 import { cn } from "../lib/utils";
-
-// This service is now deployed standalone (its own Railway service, own
-// origin - see railway.json), separate from the @elizaos/agent deployment
-// that actually serves /api/skunkscan/*. The backend's CORS already allows
-// any origin in production (wildcard-bind allowlist in
-// server-helpers-auth.ts's resolveCorsOrigin - no server-side change was
-// needed for this), but the fetch target itself must be absolute now that
-// frontend and backend are different origins. Falls back to the relative
-// path when the env var isn't set, so local dev (via vite.config.ts's proxy)
-// and any future same-origin deployment keep working unchanged.
-const API_BASE_URL = import.meta.env.VITE_SKUNKSCAN_API_BASE_URL ?? "";
+import { API_BASE_URL } from "../lib/api";
 
 // Mirrors SUPPORTED_CHAINS in packages/agent/src/skunkscan/types.ts and the
 // WalletTrustCheckCard shape in the same file - kept as a plain local copy
