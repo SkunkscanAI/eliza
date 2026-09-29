@@ -209,6 +209,19 @@ export class SessionsRepository {
     );
   }
 
+  // Sliding renewal - see session.ts's shouldRenewSession for when a
+  // caller should call this. Only touches expires_at; the token itself
+  // never changes, so this never needs a new cookie value, only a fresh
+  // Max-Age on the same cookie.
+  async renew(tokenHash: string, newExpiresAt: Date): Promise<void> {
+    await executeRawSql(
+      this.db,
+      `UPDATE ${SESSIONS_TABLE}
+       SET expires_at = ${sqlText(newExpiresAt.toISOString())}
+       WHERE token_hash = ${sqlText(tokenHash)}`,
+    );
+  }
+
   // Called on a successful password reset - a stolen/leaked session
   // cookie from before the reset should stop working the moment the
   // legitimate owner regains control via email, not silently keep
