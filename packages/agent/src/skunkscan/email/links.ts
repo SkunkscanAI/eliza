@@ -25,7 +25,12 @@ function resolveWebBaseUrl(): string {
   }
 
   if (process.env.NODE_ENV === "production") {
-    logger.warn(
+    // error, not warn - every verification/reset email sent while this is
+    // unset ships a dead localhost link to a real user. Confirmed live: a
+    // real production send embedded http://localhost:4466/... (see PR
+    // #137's own follow-up investigation) - this must be loud, not a
+    // buried warning.
+    logger.error(
       "[SkunkscanEmail] SKUNKSCAN_WEB_BASE_URL is not set in production - verification/reset email links will incorrectly point at localhost.",
     );
   }
