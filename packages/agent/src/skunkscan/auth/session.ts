@@ -34,15 +34,22 @@ export function buildSessionCookie(rawToken: string): string {
   // deployment is always HTTPS (Railway terminates TLS in front of the
   // service), and there's no legitimate reason for this cookie to ever
   // travel over plain HTTP even in a local dev/staging environment.
-  // SameSite=Lax (not Strict) because the frontend and backend are
-  // separate origins in production (see TrustCheckWidget.tsx's own
-  // API_BASE_URL comment) - Strict would silently drop the cookie on the
-  // first cross-site navigation into the app.
+  //
+  // SameSite=None (not Lax) - confirmed live via skunkscan-web's PR 3
+  // browser testing that Lax was wrong: Lax only rides along on a top-level
+  // cross-site *navigation*, not a cross-site fetch()/XHR subresource
+  // request, which is how every one of skunkscan-web's API calls is made
+  // (frontend and backend are separate Railway origins in production - see
+  // TrustCheckWidget.tsx's own API_BASE_URL comment). With Lax, register
+  // itself worked (its POST response can set a cookie), but the very next
+  // fetch("/me") silently omitted the cookie and came back unauthenticated
+  // - every session check failed post-login. None requires Secure (already
+  // set) and is fine here since this is never sent to a plain-HTTP origin.
   return [
     `${SESSION_COOKIE_NAME}=${rawToken}`,
     "HttpOnly",
     "Secure",
-    "SameSite=Lax",
+    "SameSite=None",
     "Path=/",
     `Max-Age=${maxAgeSeconds}`,
   ].join("; ");
@@ -53,7 +60,7 @@ export function buildSessionClearCookie(): string {
     `${SESSION_COOKIE_NAME}=`,
     "HttpOnly",
     "Secure",
-    "SameSite=Lax",
+    "SameSite=None",
     "Path=/",
     "Max-Age=0",
   ].join("; ");
