@@ -37,11 +37,18 @@ class SkunkScanEmailService {
   private initialize(): void {
     if (this.initialized) return;
 
+    // "noreply@skunkscan.ai" was never a valid sender - the skunkscan.ai
+    // domain isn't registered yet, so SendGrid has nothing to verify it
+    // against. skunkscanai@gmail.com is the address actually Single-Sender-
+    // Verified in SendGrid today (confirmed via its dashboard); every send
+    // to noreply@skunkscan.ai failed with a 403 Forbidden from SendGrid
+    // until this default was corrected. Swap this back to a skunkscan.ai
+    // address once that domain is registered and verified.
     this.fromEmail =
       process.env.SKUNKSCAN_EMAIL_FROM ||
       process.env.SKUNKSCAN_SENDGRID_FROM_EMAIL ||
       process.env.SKUNKSCAN_SMTP_FROM ||
-      "noreply@skunkscan.ai";
+      "skunkscanai@gmail.com";
 
     if (
       process.env.SKUNKSCAN_SMTP_HOST &&
