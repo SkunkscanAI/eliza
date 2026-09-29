@@ -16,7 +16,12 @@ import {
   type StoredUser,
 } from "../skunkscan/auth/repository";
 import { VerificationTokensRepository } from "../skunkscan/auth/verificationTokens";
-import { hashPassword, verifyPassword } from "../skunkscan/auth/password";
+import {
+  hashPassword,
+  passwordValidationMessage,
+  validatePasswordStrength,
+  verifyPassword,
+} from "../skunkscan/auth/password";
 import {
   buildSessionClearCookie,
   buildSessionCookie,
@@ -24,7 +29,13 @@ import {
   hashSessionToken,
   readSessionTokenFromCookieHeader,
   SESSION_DURATION_MS,
+  shouldRenewSession,
 } from "../skunkscan/auth/session";
+import {
+  forgotPasswordRateLimiter,
+  loginRateLimiter,
+  registerRateLimiter,
+} from "../skunkscan/auth/rate-limit";
 import type { RuntimeDb } from "../skunkscan/candidates/sql";
 import { skunkscanEmailService } from "../skunkscan/email/service";
 import { buildPasswordResetEmail, buildVerificationEmail } from "../skunkscan/email/templates";
@@ -36,13 +47,6 @@ type ReadJsonBodyHelper = (
   req: http.IncomingMessage,
   res: http.ServerResponse,
 ) => Promise<Record<string, unknown> | null>;
-
-// Same bare-minimum-floor philosophy as the rest of this milestone's
-// staging: real password-strength rules are PR 4's job (rate-limiting,
-// password strength, session-expiry hardening) - this only rejects
-// something too short to be a real password at all, so PR 1 doesn't ship
-// with zero validation while that real policy is still pending.
-const MIN_PASSWORD_LENGTH = 8;
 
 // Deliberately simple (not a full RFC 5322 parser) - matches this
 // codebase's existing philosophy elsewhere of validating "plausible
@@ -104,8 +108,18 @@ async function createSessionForUser(
 // know who's logged in - resolves the real, currently-valid session user
 // from the request's cookie, or null if there isn't one. Never throws for
 // "not logged in" - that's an expected, common case, not an error.
+//
+// `res` is used only for sliding renewal (see session.ts's
+// shouldRenewSession): when the session is close to expiring, this
+// extends it in the DB *and* re-sends the same session cookie with a
+// fresh Max-Age - renewing only the DB row would be pointless, since the
+// browser would still drop the cookie client-side at the original
+// 30-day mark regardless of what the server thinks the session's expiry
+// is. The token value itself never changes, only the expiry, so this is
+// always the same cookie value, just re-issued.
 export async function resolveSessionUser(
   req: http.IncomingMessage,
+  res: http.ServerResponse,
   db: RuntimeDb | undefined,
 ): Promise<StoredUser | null> {
   if (!db) return null;
@@ -114,8 +128,14 @@ export async function resolveSessionUser(
   if (!rawToken) return null;
 
   const sessions = new SessionsRepository(db);
-  const session = await sessions.findValidByTokenHash(hashSessionToken(rawToken));
+  const tokenHash = hashSessionToken(rawToken);
+  const session = await sessions.findValidByTokenHash(tokenHash);
   if (!session) return null;
+
+  if (shouldRenewSession(session.expiresAt)) {
+    await sessions.renew(tokenHash, new Date(Date.now() + SESSION_DURATION_MS));
+    setSessionCookie(res, rawToken);
+  }
 
   const users = new UsersRepository(db);
   return users.findById(session.userId);
@@ -144,6 +164,11 @@ export async function handleSkunkScanAuthRoute(
       return true;
     }
 
+    if (!registerRateLimiter.check(req.socket.remoteAddress ?? null)) {
+      helpers.error(res, "Too many registration attempts. Please try again later.", 429);
+      return true;
+    }
+
     const body = await helpers.readJsonBody(req, res);
     if (!body) return true;
 
@@ -155,8 +180,9 @@ export async function handleSkunkScanAuthRoute(
       return true;
     }
 
-    if (password.length < MIN_PASSWORD_LENGTH) {
-      helpers.error(res, `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`, 400);
+    const passwordError = validatePasswordStrength(password);
+    if (passwordError) {
+      helpers.error(res, passwordValidationMessage(passwordError), 400);
       return true;
     }
 
@@ -235,6 +261,16 @@ export async function handleSkunkScanAuthRoute(
       return true;
     }
 
+    if (!forgotPasswordRateLimiter.check(req.socket.remoteAddress ?? null)) {
+      // Deliberately still a real 429, not folded into the generic
+      // success response below - rate-limiting by IP happens before any
+      // per-email lookup, so it can't leak whether a specific email is
+      // registered (every caller from that IP gets the same 429
+      // regardless of which email they send).
+      helpers.error(res, "Too many requests. Please try again later.", 429);
+      return true;
+    }
+
     const body = await helpers.readJsonBody(req, res);
     if (!body) return true;
 
@@ -294,8 +330,9 @@ export async function handleSkunkScanAuthRoute(
       return true;
     }
 
-    if (newPassword.length < MIN_PASSWORD_LENGTH) {
-      helpers.error(res, `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`, 400);
+    const passwordError = validatePasswordStrength(newPassword);
+    if (passwordError) {
+      helpers.error(res, passwordValidationMessage(passwordError), 400);
       return true;
     }
 
@@ -329,6 +366,11 @@ export async function handleSkunkScanAuthRoute(
 
     if (!db) {
       helpers.error(res, "Accounts are not available in this environment.", 503);
+      return true;
+    }
+
+    if (!loginRateLimiter.check(req.socket.remoteAddress ?? null)) {
+      helpers.error(res, "Too many login attempts. Please try again later.", 429);
       return true;
     }
 
@@ -379,7 +421,7 @@ export async function handleSkunkScanAuthRoute(
       return true;
     }
 
-    const user = await resolveSessionUser(req, db);
+    const user = await resolveSessionUser(req, res, db);
     if (!user) {
       helpers.error(res, "Not logged in.", 401);
       return true;

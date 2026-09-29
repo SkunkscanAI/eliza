@@ -66,6 +66,20 @@ export function buildSessionClearCookie(): string {
   ].join("; ");
 }
 
+// Sliding renewal: a session created today expires in exactly
+// SESSION_DURATION_MS regardless of activity, unless something extends it -
+// without this, an active user gets logged out mid-use the moment they
+// cross the 30-day mark, which is a worse experience than what "stay
+// logged in for 30 days" is meant to promise. Only renew once a session is
+// getting close to expiring (not on every single authenticated request) -
+// otherwise every page load would be a DB write for no benefit, since a
+// session renewed an hour ago doesn't need renewing again yet.
+export const SESSION_RENEWAL_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+export function shouldRenewSession(expiresAt: Date): boolean {
+  return expiresAt.getTime() - Date.now() < SESSION_RENEWAL_THRESHOLD_MS;
+}
+
 export function readSessionTokenFromCookieHeader(
   cookieHeader: string | undefined,
 ): string | null {
