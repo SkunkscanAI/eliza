@@ -1,7 +1,8 @@
 /**
- * SkunkScan account routes: register/login/logout/me (Milestone 4, PR 1).
- * Deliberately no billing/entitlements anywhere here - see
- * skunkscan/auth/schema.ts's header comment for why.
+ * SkunkScan account routes: register/login/logout/me (Milestone 4, PR 1),
+ * plus email verification and forgot/reset password (PR 2). Deliberately
+ * no billing/entitlements anywhere here - see skunkscan/auth/schema.ts's
+ * header comment for why.
  *
  * Split out from skunkscan-routes.ts (rather than added inline) since auth
  * is its own distinct concern with several endpoints - keeps that file
@@ -14,6 +15,7 @@ import {
   UsersRepository,
   type StoredUser,
 } from "../skunkscan/auth/repository";
+import { VerificationTokensRepository } from "../skunkscan/auth/verificationTokens";
 import { hashPassword, verifyPassword } from "../skunkscan/auth/password";
 import {
   buildSessionClearCookie,
@@ -24,6 +26,9 @@ import {
   SESSION_DURATION_MS,
 } from "../skunkscan/auth/session";
 import type { RuntimeDb } from "../skunkscan/candidates/sql";
+import { skunkscanEmailService } from "../skunkscan/email/service";
+import { buildPasswordResetEmail, buildVerificationEmail } from "../skunkscan/email/templates";
+import { buildPasswordResetLink, buildVerificationLink } from "../skunkscan/email/links";
 
 type JsonHelper = (res: http.ServerResponse, data: unknown, status?: number) => void;
 type ErrorHelper = (res: http.ServerResponse, message: string, status?: number) => void;
@@ -48,12 +53,33 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // A single publicly-safe view of a stored user - callers must never leak
 // passwordHash back to a client, so this is the only shape routes below
 // are allowed to return.
-function toPublicUser(user: StoredUser): { id: string; email: string; createdAt: string } {
+function toPublicUser(
+  user: StoredUser,
+): { id: string; email: string; emailVerified: boolean; createdAt: string } {
   return {
     id: user.id,
     email: user.email,
+    emailVerified: user.emailVerified,
     createdAt: user.createdAt.toISOString(),
   };
+}
+
+// Best-effort: a verification email failing to send is never a reason to
+// fail registration itself - the account is real and usable either way
+// (verification never gated login/use in this milestone), and there's
+// nothing more disruptive to do here yet with no resend endpoint. Logged
+// inside skunkscanEmailService.send() itself; this function only decides
+// whether to bother trying.
+async function issueAndSendVerificationEmail(
+  db: RuntimeDb,
+  user: StoredUser,
+): Promise<void> {
+  const verificationTokens = new VerificationTokensRepository(db);
+  const { rawToken } = await verificationTokens.create(user.id, "verify_email");
+  await skunkscanEmailService.send({
+    to: user.email,
+    ...buildVerificationEmail(buildVerificationLink(rawToken)),
+  });
 }
 
 function setSessionCookie(res: http.ServerResponse, rawToken: string): void {
@@ -151,7 +177,147 @@ export async function handleSkunkScanAuthRoute(
 
     const rawToken = await createSessionForUser(sessions, user.id);
     setSessionCookie(res, rawToken);
+
+    // Fire-and-forget on purpose - see issueAndSendVerificationEmail's own
+    // doc comment for why this never blocks or fails the registration
+    // response itself.
+    void issueAndSendVerificationEmail(db, user).catch(() => {
+      /* already logged inside skunkscanEmailService.send() */
+    });
+
     helpers.json(res, { user: toPublicUser(user) }, 201);
+    return true;
+  }
+
+  if (pathname === "/api/skunkscan/auth/verify-email") {
+    if (method !== "POST") {
+      helpers.error(res, "Method not allowed", 405);
+      return true;
+    }
+
+    if (!db) {
+      helpers.error(res, "Accounts are not available in this environment.", 503);
+      return true;
+    }
+
+    const body = await helpers.readJsonBody(req, res);
+    if (!body) return true;
+
+    const token = typeof body.token === "string" ? body.token : "";
+    if (!token) {
+      helpers.error(res, "Missing verification token.", 400);
+      return true;
+    }
+
+    const verificationTokens = new VerificationTokensRepository(db);
+    const consumed = await verificationTokens.consumeIfValid(token, "verify_email");
+    if (!consumed) {
+      helpers.error(res, "This verification link is invalid or has expired.", 400);
+      return true;
+    }
+
+    const users = new UsersRepository(db);
+    await users.markEmailVerified(consumed.userId);
+    const user = await users.findById(consumed.userId);
+
+    helpers.json(res, { user: user ? toPublicUser(user) : null, verified: true }, 200);
+    return true;
+  }
+
+  if (pathname === "/api/skunkscan/auth/forgot-password") {
+    if (method !== "POST") {
+      helpers.error(res, "Method not allowed", 405);
+      return true;
+    }
+
+    if (!db) {
+      helpers.error(res, "Accounts are not available in this environment.", 503);
+      return true;
+    }
+
+    const body = await helpers.readJsonBody(req, res);
+    if (!body) return true;
+
+    const email = typeof body.email === "string" ? body.email.trim() : "";
+
+    // Same generic response regardless of whether this email is actually
+    // registered - a different response for "no such account" would let
+    // an attacker enumerate registered emails via this endpoint, exactly
+    // the same reasoning login's generic "Invalid email or password"
+    // already uses.
+    const genericResponse = {
+      message: "If an account exists for this email, a password reset link has been sent.",
+    };
+
+    const users = new UsersRepository(db);
+    const user = await users.findByEmail(email);
+
+    if (user) {
+      const verificationTokens = new VerificationTokensRepository(db);
+      const { rawToken } = await verificationTokens.create(user.id, "reset_password");
+      // Best-effort, same reasoning as issueAndSendVerificationEmail - a
+      // send failure must not turn into a different HTTP response here,
+      // since that would itself leak whether the account exists.
+      await skunkscanEmailService
+        .send({
+          to: user.email,
+          ...buildPasswordResetEmail(buildPasswordResetLink(rawToken)),
+        })
+        .catch(() => {
+          /* already logged inside skunkscanEmailService.send() */
+        });
+    }
+
+    helpers.json(res, genericResponse, 200);
+    return true;
+  }
+
+  if (pathname === "/api/skunkscan/auth/reset-password") {
+    if (method !== "POST") {
+      helpers.error(res, "Method not allowed", 405);
+      return true;
+    }
+
+    if (!db) {
+      helpers.error(res, "Accounts are not available in this environment.", 503);
+      return true;
+    }
+
+    const body = await helpers.readJsonBody(req, res);
+    if (!body) return true;
+
+    const token = typeof body.token === "string" ? body.token : "";
+    const newPassword = typeof body.newPassword === "string" ? body.newPassword : "";
+
+    if (!token) {
+      helpers.error(res, "Missing reset token.", 400);
+      return true;
+    }
+
+    if (newPassword.length < MIN_PASSWORD_LENGTH) {
+      helpers.error(res, `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`, 400);
+      return true;
+    }
+
+    const verificationTokens = new VerificationTokensRepository(db);
+    const consumed = await verificationTokens.consumeIfValid(token, "reset_password");
+    if (!consumed) {
+      helpers.error(res, "This password reset link is invalid or has expired.", 400);
+      return true;
+    }
+
+    const users = new UsersRepository(db);
+    const newPasswordHash = await hashPassword(newPassword);
+    await users.updatePasswordHash(consumed.userId, newPasswordHash);
+
+    // A successful reset invalidates every existing session for this
+    // user, not just the one making this request - see
+    // SessionsRepository.deleteAllForUser's own doc comment for why.
+    const sessions = new SessionsRepository(db);
+    await sessions.deleteAllForUser(consumed.userId);
+    clearSessionCookie(res);
+
+    helpers.json(res, { passwordReset: true }, 200);
     return true;
   }
 
