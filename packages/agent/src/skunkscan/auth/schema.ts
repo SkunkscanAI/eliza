@@ -11,7 +11,7 @@
  * any collision with @elizaos/core's own base tables.
  */
 
-import { text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { skunkscanPgSchema } from "../candidates/schema";
 
 export const users = skunkscanPgSchema.table("users", {
@@ -28,6 +28,12 @@ export const users = skunkscanPgSchema.table("users", {
   // the pure-JS package, not the native `bcrypt` binding, was used) -
   // never the plaintext password, never reversible.
   passwordHash: text("password_hash").notNull(),
+
+  // PR 2: whether the user has clicked a real verification link (see
+  // verificationTokens below). Does not gate login/use of the account -
+  // this milestone never made verification a login requirement, only a
+  // real, honest status the account carries.
+  emailVerified: boolean("email_verified").notNull().default(false),
 
   // Deliberately no `plan`/`subscription`/`credits`/`organization_id`
   // field - entitlements are out of scope for this milestone by design,
@@ -62,4 +68,38 @@ export const sessions = skunkscanPgSchema.table("sessions", {
     .defaultNow(),
 });
 
-export const authSchema = { users, sessions } as const;
+// PR 2: a single table for both purposes (verify_email and
+// reset_password) rather than two - they're structurally identical (a
+// hashed one-time token tied to a user, an expiry, a used-once marker),
+// and a `purpose` column is enough to keep them from being confused with
+// each other (checked explicitly wherever a token is consumed - see
+// auth/verificationTokens.ts).
+export const verificationTokens = skunkscanPgSchema.table("verification_tokens", {
+  id: uuid("id").primaryKey().defaultRandom(),
+
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+
+  // SHA-256 hex digest of the raw token - same reasoning as
+  // sessions.tokenHash above: the raw token only ever exists in the
+  // emailed link, never persisted.
+  tokenHash: text("token_hash").notNull().unique(),
+
+  purpose: text("purpose").notNull(),
+
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+
+  // Null until consumed. A token is valid to use exactly once - checked
+  // explicitly (usedAt IS NULL) rather than deleting the row on use, so a
+  // second attempt with the same (now-stale) link gets a real "this link
+  // was already used" answer instead of "invalid token" indistinguishable
+  // from a typo or a token that never existed.
+  usedAt: timestamp("used_at", { withTimezone: true }),
+
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const authSchema = { users, sessions, verificationTokens } as const;

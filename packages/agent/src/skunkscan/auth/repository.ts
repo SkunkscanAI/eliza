@@ -18,12 +18,14 @@ import {
 const USERS_TABLE = "skunkscan.users";
 const SESSIONS_TABLE = "skunkscan.sessions";
 
-const USER_SELECT_COLUMNS = "id, email, password_hash, created_at, updated_at";
+const USER_SELECT_COLUMNS =
+  "id, email, password_hash, email_verified, created_at, updated_at";
 
 export type StoredUser = {
   id: string;
   email: string;
   passwordHash: string;
+  emailVerified: boolean;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -48,6 +50,7 @@ function rowToUser(row: Record<string, unknown>): StoredUser {
     id: toText(row.id),
     email: toText(row.email),
     passwordHash: toText(row.password_hash),
+    emailVerified: row.email_verified === true,
     createdAt: parseTimestamp(row.created_at),
     updatedAt: parseTimestamp(row.updated_at),
   };
@@ -146,6 +149,24 @@ export class UsersRepository {
     if (rows.length === 0) return null;
     return rowToUser(rows[0]);
   }
+
+  async markEmailVerified(userId: string): Promise<void> {
+    await executeRawSql(
+      this.db,
+      `UPDATE ${USERS_TABLE}
+       SET email_verified = TRUE, updated_at = now()
+       WHERE id = ${sqlText(userId)}`,
+    );
+  }
+
+  async updatePasswordHash(userId: string, newPasswordHash: string): Promise<void> {
+    await executeRawSql(
+      this.db,
+      `UPDATE ${USERS_TABLE}
+       SET password_hash = ${sqlText(newPasswordHash)}, updated_at = now()
+       WHERE id = ${sqlText(userId)}`,
+    );
+  }
 }
 
 export class SessionsRepository {
@@ -185,6 +206,17 @@ export class SessionsRepository {
     await executeRawSql(
       this.db,
       `DELETE FROM ${SESSIONS_TABLE} WHERE token_hash = ${sqlText(tokenHash)}`,
+    );
+  }
+
+  // Called on a successful password reset - a stolen/leaked session
+  // cookie from before the reset should stop working the moment the
+  // legitimate owner regains control via email, not silently keep
+  // working until it naturally expires up to 30 days later.
+  async deleteAllForUser(userId: string): Promise<void> {
+    await executeRawSql(
+      this.db,
+      `DELETE FROM ${SESSIONS_TABLE} WHERE user_id = ${sqlText(userId)}`,
     );
   }
 }

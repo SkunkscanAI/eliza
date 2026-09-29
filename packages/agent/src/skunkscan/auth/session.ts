@@ -9,7 +9,7 @@
  * persisted (see auth/schema.ts's sessions.tokenHash doc comment) - the
  * raw token exists only in the cookie itself.
  */
-import { randomBytes, createHash } from "node:crypto";
+import { generateRawToken, hashRawToken } from "./tokens";
 
 export const SESSION_COOKIE_NAME = "skunkscan_session";
 
@@ -20,13 +20,12 @@ export const SESSION_COOKIE_NAME = "skunkscan_session";
 // consumer-web session length).
 export const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
 
-export function generateSessionToken(): string {
-  return randomBytes(32).toString("hex");
-}
-
-export function hashSessionToken(rawToken: string): string {
-  return createHash("sha256").update(rawToken).digest("hex");
-}
+// Thin, session-specific names over the generic token helpers (see
+// tokens.ts) - kept as named exports so PR 1's existing callers
+// (auth-routes.ts) don't need to change, now that verificationTokens.ts
+// (PR 2) is a second consumer of the same underlying crypto.
+export const generateSessionToken = generateRawToken;
+export const hashSessionToken = hashRawToken;
 
 export function buildSessionCookie(rawToken: string): string {
   const maxAgeSeconds = Math.floor(SESSION_DURATION_MS / 1000);
