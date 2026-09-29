@@ -4,6 +4,7 @@ import { investigateWallet } from "../skunkscan/wallet";
 import { isSupportedChain, SUPPORTED_CHAINS, SupportedChain } from "../skunkscan/types";
 import { buildTrustCheckCard } from "../skunkscan/analyzers/trustCheckCard";
 import type { RuntimeDb } from "../skunkscan/candidates/sql";
+import { handleSkunkScanAuthRoute } from "./skunkscan-auth-routes";
 
 // Same cast used by services/approval/sql.ts and
 // services/knowledge-graph/sql.ts for the same purpose - `runtime.adapter.db`
@@ -82,6 +83,10 @@ export async function handleSkunkScanRoute(
   },
 ): Promise<boolean> {
   const db = resolveRuntimeDb(helpers.runtime);
+
+  if (pathname.startsWith("/api/skunkscan/auth/")) {
+    return handleSkunkScanAuthRoute(req, res, pathname, method, db, helpers);
+  }
 
   if (pathname === "/api/skunkscan/trust-check") {
     if (method !== "POST") {
