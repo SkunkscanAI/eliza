@@ -1924,6 +1924,24 @@ async function handleRequest(
   // it's genuinely unlocked, same as trust-check.
   const isSkunkScanWalletEndpoint =
     method === "POST" && pathname === "/api/skunkscan/wallet";
+  // SkunkScan's own account routes (register/login/logout/me/verify-email/
+  // forgot-password/reset-password - see skunkscan-auth-routes.ts). These
+  // are SkunkScan's OWN public-facing accounts, unrelated to the shared
+  // ELIZA_API_TOKEN this gate otherwise protects - requiring that token to
+  // even register a new SkunkScan account would make it impossible for a
+  // real visitor to ever sign up. Real bug this exemption fixes: PR 1/PR 2
+  // shipped and merged these routes without ever adding this exemption, so
+  // every one of them returned a 401 "Unauthorized" in production - found
+  // by testing the real deployed backend directly, not caught by any of
+  // this milestone's earlier verification (which called
+  // handleSkunkScanRoute directly in a standalone script, bypassing this
+  // whole server.ts gate entirely, the same way trust-check/wallet's own
+  // verification always has). Each individual route still enforces its
+  // own real security (password verification, session-cookie validation
+  // for /me, one-time-use tokens for verify-email/reset-password) - this
+  // only controls whether the shared dashboard token is required to reach
+  // them at all, which it must not be.
+  const isSkunkScanAuthEndpoint = pathname.startsWith("/api/skunkscan/auth/");
   const isAuthProtectedPath = isAuthProtectedRoute(pathname);
 
   const canonicalizeRestartReason = (reason: string): string => {
@@ -2068,6 +2086,7 @@ async function handleRequest(
     !isBlueBubblesWebhookEndpoint &&
     !isSkunkScanTrustCheckEndpoint &&
     !isSkunkScanWalletEndpoint &&
+    !isSkunkScanAuthEndpoint &&
     !isPublicRuntimePluginRoute({
       runtime: state.runtime,
       method,
