@@ -321,6 +321,7 @@
     "@noble/hashes": "2.2.0",
     "@solana/web3.js": "1.98.4",
     "async-lock": "^1.4.1",
+    "bcryptjs": "^3.0.3",
     "clean-git-ref": "^2.0.1",
     "crc-32": "^1.2.0",
     "diff3": "0.0.4",

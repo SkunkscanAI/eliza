@@ -69,6 +69,7 @@ import { PermissionRegistry } from "../services/permissions-registry.ts";
 import { NotificationPushService } from "../services/push/notification-push-service.ts";
 import { resolveDefaultAgentWorkspaceDir } from "../shared/workspace-resolution.ts";
 import { scamPatternCandidatesSchema } from "../skunkscan/candidates/schema.ts";
+import { authSchema } from "../skunkscan/auth/schema.ts";
 import { registerTriggerTaskWorker } from "../triggers/runtime.ts";
 
 import { setCustomActionsRuntime } from "./custom-actions.ts";
@@ -128,10 +129,10 @@ export function createElizaPlugin(config?: ElizaPluginConfig): Plugin {
 
     // Runtime-owned knowledge graph (entity nodes + typed relationship edges)
     // under the app_lifeops schema, plus SkunkScan's scam-pattern-candidate
-    // review table under its own `skunkscan` schema. Registered here so the
-    // tables exist whenever the runtime runs and are migrated by the SQL
-    // plugin.
-    schema: { ...knowledgeGraphSchema, ...scamPatternCandidatesSchema },
+    // review table and (Milestone 4) user-account tables, both under their
+    // own `skunkscan` schema. Registered here so the tables exist whenever
+    // the runtime runs and are migrated by the SQL plugin.
+    schema: { ...knowledgeGraphSchema, ...scamPatternCandidatesSchema, ...authSchema },
 
     services: [
       AgentEventService as ServiceClass,
