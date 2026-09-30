@@ -70,6 +70,7 @@ import { NotificationPushService } from "../services/push/notification-push-serv
 import { resolveDefaultAgentWorkspaceDir } from "../shared/workspace-resolution.ts";
 import { scamPatternCandidatesSchema } from "../skunkscan/candidates/schema.ts";
 import { authSchema } from "../skunkscan/auth/schema.ts";
+import { investigationsSchema } from "../skunkscan/investigations/schema.ts";
 import { registerTriggerTaskWorker } from "../triggers/runtime.ts";
 
 import { setCustomActionsRuntime } from "./custom-actions.ts";
@@ -132,7 +133,12 @@ export function createElizaPlugin(config?: ElizaPluginConfig): Plugin {
     // review table and (Milestone 4) user-account tables, both under their
     // own `skunkscan` schema. Registered here so the tables exist whenever
     // the runtime runs and are migrated by the SQL plugin.
-    schema: { ...knowledgeGraphSchema, ...scamPatternCandidatesSchema, ...authSchema },
+    schema: {
+      ...knowledgeGraphSchema,
+      ...scamPatternCandidatesSchema,
+      ...authSchema,
+      ...investigationsSchema,
+    },
 
     services: [
       AgentEventService as ServiceClass,

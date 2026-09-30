@@ -10,7 +10,7 @@ import { buildScopeDisclosure } from "./sourceDisclosure";
 // into yellow - both mean "not clean, not confirmed dangerous," which is
 // the distinction the free card needs to communicate, not the finer-grained
 // recommendation the paid report gives.
-function tierForVerdict(
+export function tierForVerdict(
   verdict: WalletInvestigationResult["executiveVerdict"],
 ): WalletTrustCheckTier | null {
   if (!verdict) return null;

@@ -4,7 +4,11 @@ import { investigateWallet } from "../skunkscan/wallet";
 import { isSupportedChain, SUPPORTED_CHAINS, SupportedChain } from "../skunkscan/types";
 import { buildTrustCheckCard } from "../skunkscan/analyzers/trustCheckCard";
 import type { RuntimeDb } from "../skunkscan/candidates/sql";
-import { handleSkunkScanAuthRoute } from "./skunkscan-auth-routes";
+import { handleSkunkScanAuthRoute, resolveSessionUser } from "./skunkscan-auth-routes";
+import { handleSkunkScanInvestigationsRoute } from "./skunkscan-investigations-routes";
+import { InvestigationStore } from "../skunkscan/investigations/store";
+import { buildInvestigationCaseFromWalletResult } from "../skunkscan/investigations/fromWalletResult";
+import { logger } from "@elizaos/core";
 
 // Same cast used by services/approval/sql.ts and
 // services/knowledge-graph/sql.ts for the same purpose - `runtime.adapter.db`
@@ -88,6 +92,10 @@ export async function handleSkunkScanRoute(
     return handleSkunkScanAuthRoute(req, res, pathname, method, db, helpers);
   }
 
+  if (pathname === "/api/skunkscan/investigations") {
+    return handleSkunkScanInvestigationsRoute(req, res, pathname, method, db, helpers);
+  }
+
   if (pathname === "/api/skunkscan/trust-check") {
     if (method !== "POST") {
       helpers.error(res, "Method not allowed", 405);
@@ -117,6 +125,32 @@ export async function handleSkunkScanRoute(
   if (!parsed) return true;
 
   const result = await investigateWallet(parsed.chain, parsed.address, { db });
+
+  // Auto-save to the logged-in user's search history - deliberately only
+  // here, not on /trust-check above (the homepage widget is explicitly
+  // marketed "Free, no account needed"; silently building history from an
+  // accountless tool would contradict its own copy). Never lets a save
+  // failure change the response - a broken history write is never a
+  // reason to fail a real investigation the user is actively waiting on.
+  if (db && result.status === "supported") {
+    const user = await resolveSessionUser(req, res, db);
+    if (user) {
+      try {
+        const investigation = buildInvestigationCaseFromWalletResult(
+          user.id,
+          parsed.chain,
+          parsed.address,
+          result,
+        );
+        await new InvestigationStore(db).save({ ownerId: user.id, investigation });
+      } catch (error) {
+        logger.warn(
+          { error: error instanceof Error ? error.message : String(error) },
+          "[SkunkscanInvestigations] failed to save search history",
+        );
+      }
+    }
+  }
 
   helpers.json(res, result, result.status === "supported" ? 200 : 400);
   return true;
