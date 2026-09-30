@@ -1,8 +1,103 @@
-import { useState } from "react";
-import { Navigate, useSearchParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { API_BASE_URL } from "../lib/api";
 import { useAuth } from "../lib/AuthContext";
+
+type SavedInvestigation = {
+  id: string;
+  chain: string;
+  address: string;
+  tier: "green" | "yellow" | "red" | null;
+  headline: string | null;
+  savedAt: string;
+};
+
+// Same 3-color convention as TrustCheckWidget's own TIER_STYLE - a saved
+// search's dot uses the identical color meaning as the free Trust Check
+// card, not a second color scheme for the same 3 states.
+const TIER_DOT_COLOR: Record<"green" | "yellow" | "red", string> = {
+  green: "bg-signal-green",
+  yellow: "bg-signal-yellow",
+  red: "bg-signal-red",
+};
+
+function truncateAddress(address: string): string {
+  return address.length > 14 ? `${address.slice(0, 6)}…${address.slice(-4)}` : address;
+}
+
+function formatSavedDate(savedAt: string): string {
+  const parsed = new Date(savedAt);
+  return Number.isNaN(parsed.getTime()) ? savedAt : parsed.toISOString().slice(0, 10);
+}
+
+function RecentSearches() {
+  const [investigations, setInvestigations] = useState<SavedInvestigation[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch(`${API_BASE_URL}/api/skunkscan/investigations`, { credentials: "include" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Could not load recent searches.");
+        const body = (await response.json()) as { investigations: SavedInvestigation[] };
+        if (!cancelled) setInvestigations(body.investigations);
+      })
+      .catch(() => {
+        if (!cancelled) setError("Could not load recent searches.");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (error) {
+    return <p className="text-sm text-signal-red">{error}</p>;
+  }
+
+  if (investigations === null) {
+    return <p className="text-sm text-ink-400">Loading…</p>;
+  }
+
+  if (investigations.length === 0) {
+    return (
+      <p className="text-sm text-ink-400">
+        No searches yet - wallets you check will show up here.
+      </p>
+    );
+  }
+
+  return (
+    <ul className="divide-y divide-ink-800">
+      {investigations.map((item) => (
+        <li key={item.id}>
+          <Link
+            to={`/report/${item.chain}/${encodeURIComponent(item.address)}`}
+            className="flex items-center gap-3 py-3 hover:bg-ink-800/40"
+          >
+            <span
+              className={`h-2.5 w-2.5 shrink-0 rounded-full ${
+                item.tier ? TIER_DOT_COLOR[item.tier] : "bg-ink-600"
+              }`}
+              aria-hidden="true"
+            />
+            <span className="flex-1 min-w-0">
+              <span className="block truncate text-sm text-ink-50">
+                {item.chain} · {truncateAddress(item.address)}
+              </span>
+              {item.headline && (
+                <span className="block truncate text-xs text-ink-400">{item.headline}</span>
+              )}
+            </span>
+            <span className="shrink-0 text-xs text-ink-400">{formatSavedDate(item.savedAt)}</span>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 // "Change password" reuses the existing forgot-password flow rather than a
 // dedicated authenticated change-password endpoint - none exists yet (see
@@ -91,6 +186,20 @@ export function Account() {
               {changePasswordState === "sending" ? "Sending…" : "Change password"}
             </Button>
           )}
+        </div>
+      </div>
+
+      <div className="mt-6 rounded-2xl border border-ink-800 bg-ink-900/60 p-6">
+        <h2 className="text-lg font-semibold text-ink-50">Plan &amp; Billing</h2>
+        <p className="mt-2 text-sm text-ink-200">
+          You're currently on the Free plan. Paid plans are coming soon.
+        </p>
+      </div>
+
+      <div className="mt-6 rounded-2xl border border-ink-800 bg-ink-900/60 p-6">
+        <h2 className="text-lg font-semibold text-ink-50">Recent searches</h2>
+        <div className="mt-4">
+          <RecentSearches />
         </div>
       </div>
 

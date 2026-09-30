@@ -1,4 +1,5 @@
 import { InvestigationCase } from "./types";
+import { WalletTrustCheckTier } from "../types";
 
 /**
  * Identifies the individual investor who owns a saved investigation.
@@ -68,6 +69,18 @@ export interface StoredInvestigationSummary {
   personalLabel?: string;
 
   isWatchlisted: boolean;
+
+  /**
+   * The free Trust Check tier (green/yellow/red) at the time this was last
+   * saved - see analyzers/trustCheckCard.ts's tierForVerdict. Additive
+   * field (Milestone 4, PR 5): InvestigationCase.status is a case-
+   * management lifecycle value, not a risk tier, so this is what a saved-
+   * search list actually renders instead of repurposing `status`.
+   */
+  tier?: WalletTrustCheckTier | null;
+
+  /** Paired with `tier` - the same one-line headline the Trust Check card shows. */
+  headline?: string;
 }
 
 /**

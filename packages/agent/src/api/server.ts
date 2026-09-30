@@ -1942,6 +1942,19 @@ async function handleRequest(
   // only controls whether the shared dashboard token is required to reach
   // them at all, which it must not be.
   const isSkunkScanAuthEndpoint = pathname.startsWith("/api/skunkscan/auth/");
+  // SkunkScan's own saved-search-history route (see
+  // skunkscan-investigations-routes.ts) - same reasoning as
+  // isSkunkScanAuthEndpoint above: called directly by the public
+  // skunkscan-web frontend, which has no ELIZA_API_TOKEN, only a
+  // SkunkScan session cookie. That cookie is checked inside the route
+  // handler itself (resolveSessionUser) - this only controls whether the
+  // shared dashboard token is required to reach the route at all, which
+  // it must not be. Added proactively this time (not found via a 401 in
+  // production) per the standing checklist from the auth-routes bug above:
+  // every new skunkscan-routes.ts route gets checked against this gate
+  // before it ships, not after.
+  const isSkunkScanInvestigationsEndpoint =
+    method === "GET" && pathname === "/api/skunkscan/investigations";
   const isAuthProtectedPath = isAuthProtectedRoute(pathname);
 
   const canonicalizeRestartReason = (reason: string): string => {
@@ -2087,6 +2100,7 @@ async function handleRequest(
     !isSkunkScanTrustCheckEndpoint &&
     !isSkunkScanWalletEndpoint &&
     !isSkunkScanAuthEndpoint &&
+    !isSkunkScanInvestigationsEndpoint &&
     !isPublicRuntimePluginRoute({
       runtime: state.runtime,
       method,
